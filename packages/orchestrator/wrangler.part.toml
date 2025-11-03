@@ -1,0 +1,23 @@
+name = "mission-control-orchestrator"
+main = "src/index.ts"
+compatibility_date = "2025-11-02"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "mission_control"
+database_id = "auto"
+
+[[kv_namespaces]]
+binding = "CACHE"
+id = "auto"
+
+[[r2_buckets]]
+binding = "FILES"
+bucket_name = "mission-assets"
+
+[[queues.consumers]]
+queue = "ORDERS_QUEUE"
+consumer = "src/consumers/orders.ts"
+
+[observability.logs]
+enabled = true

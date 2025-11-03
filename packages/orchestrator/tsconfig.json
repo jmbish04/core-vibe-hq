@@ -1,0 +1,13 @@
+{
+  "extends": "@cloudflare/workers-types/tsconfig.json",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "moduleDetection": "force",
+    "esModuleInterop": true,
+    "types": ["@cloudflare/workers-types"]
+  },
+  "include": ["src", "scripts"]
+}

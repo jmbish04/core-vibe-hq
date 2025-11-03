@@ -1,0 +1,28 @@
+{
+  "name": "mission-control-orchestrator",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "build": "wrangler build",
+    "deploy": "wrangler deploy --remote",
+    "migrate": "wrangler d1 migrations apply --remote",
+    "openapi": "ts-node scripts/generate-openapi.ts"
+  },
+  "dependencies": {
+    "hono": "^4.4.7",
+    "zod": "^3.23.8",
+    "zod-openapi": "^1.8.0",
+    "drizzle-orm": "^0.30.10",
+    "kysely": "^0.27.5",
+    "kysely-d1": "^0.4.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241205.0",
+    "drizzle-kit": "^0.30.10",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.3",
+    "wrangler": "^3.88.0"
+  }
+}
