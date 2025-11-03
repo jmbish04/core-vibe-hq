@@ -3,7 +3,7 @@ import { z } from "zod";
 
 export const planInputSchema = z.object({
   projectId: z.number().int().positive().nullable().optional(),
-  jsonBody: z.record(z.any()),
+  jsonBody: z.record(z.unknown()),
   version: z.number().int().positive().default(1)
 });
 
