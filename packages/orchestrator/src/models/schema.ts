@@ -45,7 +45,7 @@ export const inventory = sqliteTable("inventory", {
   createdAt: integer("created_at", { mode: "timestamp" }).default(sql`CURRENT_TIMESTAMP`)
 });
 
-export const orchestrationErrors = sqliteTable("errors", {
+export const errors = sqliteTable("errors", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   orderId: integer("order_id").references(() => orders.id),
   message: text("message"),
