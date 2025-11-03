@@ -1,0 +1,403 @@
+.
+├── LICENSE
+├── MISSION_CONTROL__VIBE_INTEGRATION_MAP.md
+├── README.md
+├── factory
+│   ├── agent
+│   │   └── worker
+│   │       ├── agents
+│   │       │   ├── core
+│   │       │   │   ├── smartGeneratorAgent.ts
+│   │       │   │   ├── state.ts
+│   │       │   │   ├── types.ts
+│   │       │   │   └── websocket.ts
+│   │       │   ├── index.ts
+│   │       │   ├── operations
+│   │       │   │   ├── FileRegeneration.ts
+│   │       │   │   ├── Guardrail.md
+│   │       │   │   ├── PhaseGeneration.ts
+│   │       │   │   ├── PhaseImplementation.ts
+│   │       │   │   ├── PostPhaseCodeFixer.ts
+│   │       │   │   ├── ScreenshotAnalysis.ts
+│   │       │   │   ├── UserConversationProcessor.ts
+│   │       │   │   └── common.ts
+│   │       │   ├── planning
+│   │       │   │   ├── blueprint.ts
+│   │       │   │   └── templateSelector.ts
+│   │       │   └── tools
+│   │       │       └── toolkit
+│   │       │           ├── alter-blueprint.ts
+│   │       │           ├── deep-debugger.ts
+│   │       │           ├── deploy-preview.ts
+│   │       │           ├── exec-commands.ts
+│   │       │           ├── feedback.ts
+│   │       │           ├── generate-files.ts
+│   │       │           ├── get-logs.ts
+│   │       │           ├── get-runtime-errors.ts
+│   │       │           ├── git.ts
+│   │       │           ├── queue-request.ts
+│   │       │           ├── read-files.ts
+│   │       │           ├── regenerate-file.ts
+│   │       │           ├── rename-project.ts
+│   │       │           ├── run-analysis.ts
+│   │       │           ├── wait-for-debug.ts
+│   │       │           ├── wait-for-generation.ts
+│   │       │           ├── wait.ts
+│   │       │           └── web-search.ts
+│   │       └── api
+│   │           └── routes
+│   │               └── codegenRoutes.ts
+│   ├── data
+│   │   ├── drizzle.config.local.ts
+│   │   ├── drizzle.config.remote.ts
+│   │   ├── migrations
+│   │   │   ├── 0000_living_forge.sql
+│   │   │   ├── 0001_married_moondragon.sql
+│   │   │   ├── 0002_nebulous_fantastic_four.sql
+│   │   │   ├── 0003_bumpy_albert_cleary.sql
+│   │   │   └── meta
+│   │   │       ├── 0000_snapshot.json
+│   │   │       ├── 0001_snapshot.json
+│   │   │       ├── 0002_snapshot.json
+│   │   │       ├── 0003_snapshot.json
+│   │   │       └── _journal.json
+│   │   └── worker
+│   │       └── database
+│   │           ├── database.ts
+│   │           ├── schema.ts
+│   │           └── services
+│   │               ├── AnalyticsService.ts
+│   │               ├── ApiKeyService.ts
+│   │               ├── AppService.ts
+│   │               ├── AuthService.ts
+│   │               ├── BaseService.ts
+│   │               ├── ModelConfigService.ts
+│   │               ├── ModelProvidersService.ts
+│   │               ├── ModelTestService.ts
+│   │               ├── SecretsService.ts
+│   │               ├── SessionService.ts
+│   │               └── UserService.ts
+│   ├── memory-library
+│   │   └── worker
+│   │       └── agents
+│   │           └── schemas.ts
+│   ├── orchestrator
+│   │   ├── package.json
+│   │   ├── scripts
+│   │   │   ├── deploy.ts
+│   │   │   ├── setup.ts
+│   │   │   └── undeploy.ts
+│   │   ├── tsconfig.json
+│   │   ├── tsconfig.worker.json
+│   │   ├── vite.config.ts
+│   │   ├── worker
+│   │   │   ├── api
+│   │   │   │   └── routes
+│   │   │   │       └── index.ts
+│   │   │   ├── app.ts
+│   │   │   ├── config
+│   │   │   │   ├── index.ts
+│   │   │   │   └── security.ts
+│   │   │   ├── index.ts
+│   │   │   └── services
+│   │   │       └── aigateway-proxy
+│   │   │           └── controller.ts
+│   │   └── wrangler.jsonc
+│   ├── services
+│   │   └── worker
+│   │       ├── api
+│   │       │   ├── controllers
+│   │       │   │   ├── agent
+│   │       │   │   │   ├── controller.ts
+│   │       │   │   │   └── types.ts
+│   │       │   │   ├── analytics
+│   │       │   │   │   ├── controller.ts
+│   │       │   │   │   └── types.ts
+│   │       │   │   ├── appView
+│   │       │   │   │   ├── controller.ts
+│   │       │   │   │   └── types.ts
+│   │       │   │   ├── apps
+│   │       │   │   │   ├── controller.ts
+│   │       │   │   │   └── types.ts
+│   │       │   │   ├── auth
+│   │       │   │   │   ├── authSchemas.ts
+│   │       │   │   │   └── controller.ts
+│   │       │   │   ├── baseController.ts
+│   │       │   │   ├── githubExporter
+│   │       │   │   │   └── controller.ts
+│   │       │   │   ├── modelConfig
+│   │       │   │   │   ├── byokHelper.ts
+│   │       │   │   │   ├── controller.ts
+│   │       │   │   │   └── types.ts
+│   │       │   │   ├── modelProviders
+│   │       │   │   │   ├── controller.ts
+│   │       │   │   │   └── types.ts
+│   │       │   │   ├── screenshots
+│   │       │   │   │   └── controller.ts
+│   │       │   │   ├── secrets
+│   │       │   │   │   ├── controller.ts
+│   │       │   │   │   └── types.ts
+│   │       │   │   ├── sentry
+│   │       │   │   │   └── tunnelController.ts
+│   │       │   │   ├── stats
+│   │       │   │   │   ├── controller.ts
+│   │       │   │   │   └── types.ts
+│   │       │   │   ├── status
+│   │       │   │   │   ├── controller.ts
+│   │       │   │   │   └── types.ts
+│   │       │   │   ├── types.ts
+│   │       │   │   └── user
+│   │       │   │       ├── controller.ts
+│   │       │   │       └── types.ts
+│   │       │   └── routes
+│   │       │       ├── analyticsRoutes.ts
+│   │       │       ├── appRoutes.ts
+│   │       │       ├── authRoutes.ts
+│   │       │       ├── githubExporterRoutes.ts
+│   │       │       ├── modelConfigRoutes.ts
+│   │       │       ├── modelProviderRoutes.ts
+│   │       │       ├── secretsRoutes.ts
+│   │       │       └── userRoutes.ts
+│   │       ├── middleware
+│   │       │   ├── auth
+│   │       │   │   ├── auth.ts
+│   │       │   │   └── routeAuth.ts
+│   │       │   └── security
+│   │       │       └── websocket.ts
+│   │       ├── services
+│   │       │   ├── cache
+│   │       │   │   ├── CacheService.ts
+│   │       │   │   ├── KVCache.ts
+│   │       │   │   └── wrapper.ts
+│   │       │   ├── github
+│   │       │   │   ├── GitHubService.ts
+│   │       │   │   ├── index.ts
+│   │       │   │   └── types.ts
+│   │       │   ├── oauth
+│   │       │   │   ├── base.ts
+│   │       │   │   ├── github-exporter.ts
+│   │       │   │   ├── github.ts
+│   │       │   │   └── google.ts
+│   │       │   ├── rate-limit
+│   │       │   │   ├── DORateLimitStore.ts
+│   │       │   │   ├── KVRateLimitStore.ts
+│   │       │   │   ├── config.ts
+│   │       │   │   ├── errors.ts
+│   │       │   │   └── rateLimits.ts
+│   │       │   └── sandbox
+│   │       │       ├── BaseSandboxService.ts
+│   │       │       ├── factory.ts
+│   │       │       ├── fileTreeBuilder.ts
+│   │       │       ├── remoteSandboxService.ts
+│   │       │       ├── request-handler.ts
+│   │       │       ├── resourceProvisioner.ts
+│   │       │       ├── sandboxSdkClient.ts
+│   │       │       ├── sandboxTypes.ts
+│   │       │       ├── templateParser.ts
+│   │       │       ├── types.ts
+│   │       │       ├── utils.ts
+│   │       │       └── zipExtractor.ts
+│   │       └── utils
+│   │           ├── ErrorHandling.ts
+│   │           ├── authUtils.ts
+│   │           ├── cryptoUtils.ts
+│   │           └── jwtUtils.ts
+│   ├── shared-types
+│   │   ├── shared
+│   │   │   └── types
+│   │   │       └── errors.ts
+│   │   ├── src
+│   │   │   └── api-types.ts
+│   │   └── worker
+│   │       ├── agents
+│   │       │   └── constants.ts
+│   │       └── api
+│   │           └── websocketTypes.ts
+│   └── ui
+│       ├── components.json
+│       └── src
+│           ├── App.tsx
+│           ├── api-types.ts
+│           ├── assets
+│           │   ├── fonts
+│           │   │   └── DepartureMono-Regular.woff
+│           │   └── provider-logos
+│           │       ├── anthropic.svg
+│           │       ├── cerebras.svg
+│           │       ├── cloudflare.svg
+│           │       ├── google.svg
+│           │       └── openai.svg
+│           ├── components
+│           │   ├── ErrorBoundary.tsx
+│           │   ├── agent-mode-display.tsx
+│           │   ├── agent-mode-toggle.tsx
+│           │   ├── analytics
+│           │   │   └── cost-display.tsx
+│           │   ├── auth
+│           │   │   ├── AuthModalProvider.tsx
+│           │   │   ├── auth-button.tsx
+│           │   │   └── login-modal.tsx
+│           │   ├── byok-api-keys-modal.tsx
+│           │   ├── config-card.tsx
+│           │   ├── config-modal.tsx
+│           │   ├── github-export-modal.tsx
+│           │   ├── header.tsx
+│           │   ├── icons
+│           │   │   └── logos.tsx
+│           │   ├── image-attachment-preview.tsx
+│           │   ├── image-upload-button.tsx
+│           │   ├── layout
+│           │   │   ├── app-layout.tsx
+│           │   │   ├── app-sidebar.tsx
+│           │   │   ├── global-header.tsx
+│           │   │   └── sidebar-overrides.css
+│           │   ├── model-config-tabs.tsx
+│           │   ├── monaco-editor
+│           │   │   ├── monaco-editor.module.css
+│           │   │   └── monaco-editor.tsx
+│           │   ├── primitives
+│           │   │   └── button.tsx
+│           │   ├── shared
+│           │   │   ├── AppActionsDropdown.tsx
+│           │   │   ├── AppCard.tsx
+│           │   │   ├── AppFiltersForm.tsx
+│           │   │   ├── AppListContainer.tsx
+│           │   │   ├── AppSortTabs.tsx
+│           │   │   ├── ConfirmDeleteDialog.tsx
+│           │   │   ├── GitCloneInline.tsx
+│           │   │   ├── GitCloneModal.tsx
+│           │   │   ├── TimePeriodSelector.tsx
+│           │   │   └── VisibilityFilter.tsx
+│           │   ├── theme-toggle.tsx
+│           │   └── ui
+│           │       ├── accordion.tsx
+│           │       ├── alert-dialog.tsx
+│           │       ├── alert.tsx
+│           │       ├── aspect-ratio.tsx
+│           │       ├── avatar.tsx
+│           │       ├── badge.tsx
+│           │       ├── breadcrumb.tsx
+│           │       ├── button.tsx
+│           │       ├── calendar.tsx
+│           │       ├── card.tsx
+│           │       ├── carousel.tsx
+│           │       ├── checkbox.tsx
+│           │       ├── collapsible.tsx
+│           │       ├── command.tsx
+│           │       ├── context-menu.tsx
+│           │       ├── dialog.tsx
+│           │       ├── drawer.tsx
+│           │       ├── dropdown-menu.tsx
+│           │       ├── form.tsx
+│           │       ├── hover-card.tsx
+│           │       ├── input-otp.tsx
+│           │       ├── input.tsx
+│           │       ├── label.tsx
+│           │       ├── menubar.tsx
+│           │       ├── model-selector.tsx
+│           │       ├── navigation-menu.tsx
+│           │       ├── pagination.tsx
+│           │       ├── popover.tsx
+│           │       ├── progress.tsx
+│           │       ├── radio-group.tsx
+│           │       ├── resizable.tsx
+│           │       ├── scroll-area.tsx
+│           │       ├── select.tsx
+│           │       ├── separator.tsx
+│           │       ├── sheet.tsx
+│           │       ├── sidebar.tsx
+│           │       ├── skeleton.tsx
+│           │       ├── slider.tsx
+│           │       ├── sonner.tsx
+│           │       ├── switch.tsx
+│           │       ├── table.tsx
+│           │       ├── tabs.tsx
+│           │       ├── textarea.tsx
+│           │       ├── toggle-group.tsx
+│           │       ├── toggle.tsx
+│           │       └── tooltip.tsx
+│           ├── contexts
+│           │   ├── apps-data-context.tsx
+│           │   ├── auth-context.tsx
+│           │   └── theme-context.tsx
+│           ├── hooks
+│           │   ├── use-analytics.ts
+│           │   ├── use-app.ts
+│           │   ├── use-apps.ts
+│           │   ├── use-auto-scroll.ts
+│           │   ├── use-drag-drop.ts
+│           │   ├── use-github-export.ts
+│           │   ├── use-image-upload.ts
+│           │   ├── use-infinite-scroll.ts
+│           │   ├── use-mobile.ts
+│           │   ├── use-paginated-apps.ts
+│           │   ├── use-platform-status.ts
+│           │   ├── use-stats.ts
+│           │   ├── useAuthGuard.ts
+│           │   └── useSentryUser.ts
+│           ├── index.css
+│           ├── lib
+│           │   ├── api-client.ts
+│           │   ├── app-events.ts
+│           │   └── utils.ts
+│           ├── main.tsx
+│           ├── routes
+│           │   ├── app
+│           │   │   └── index.tsx
+│           │   ├── apps
+│           │   │   └── index.tsx
+│           │   ├── chat
+│           │   │   ├── chat.tsx
+│           │   │   ├── components
+│           │   │   │   ├── blueprint.tsx
+│           │   │   │   ├── copy.tsx
+│           │   │   │   ├── debug-panel.tsx
+│           │   │   │   ├── debug-session-bubble.tsx
+│           │   │   │   ├── deployment-controls.tsx
+│           │   │   │   ├── file-explorer.tsx
+│           │   │   │   ├── messages.tsx
+│           │   │   │   ├── model-config-info.tsx
+│           │   │   │   ├── phase-timeline.tsx
+│           │   │   │   ├── preview-iframe.tsx
+│           │   │   │   ├── terminal.tsx
+│           │   │   │   ├── thinking-indicator.tsx
+│           │   │   │   └── view-mode-switch.tsx
+│           │   │   ├── hooks
+│           │   │   │   ├── use-chat.ts
+│           │   │   │   ├── use-debug-session.ts
+│           │   │   │   └── use-file-content-stream.ts
+│           │   │   ├── mocks
+│           │   │   │   ├── file-mock.ts
+│           │   │   │   └── phase-timeline-mock.ts
+│           │   │   └── utils
+│           │   │       ├── deduplicate-messages.ts
+│           │   │       ├── file-state-helpers.ts
+│           │   │       ├── handle-websocket-message.ts
+│           │   │       ├── message-helpers.ts
+│           │   │       ├── project-stage-helpers.ts
+│           │   │       └── websocket-helpers.ts
+│           │   ├── discover
+│           │   │   └── index.tsx
+│           │   ├── home.tsx
+│           │   ├── profile.tsx
+│           │   ├── protected-route.tsx
+│           │   └── settings
+│           │       └── index.tsx
+│           ├── routes.ts
+│           ├── utils
+│           │   ├── analytics.ts
+│           │   ├── id-generator.ts
+│           │   ├── logger.ts
+│           │   ├── ndjson-parser
+│           │   │   ├── ndjson-parser.test.ts
+│           │   │   └── ndjson-parser.ts
+│           │   ├── screenshot.ts
+│           │   ├── sentry.ts
+│           │   ├── string.ts
+│           │   └── validationUtils.ts
+│           └── vite-env.d.ts
+├── migrate_files.py
+├── plan.json
+└── tree.txt
+
+94 directories, 307 files

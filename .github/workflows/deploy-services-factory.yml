@@ -1,0 +1,33 @@
+name: Deploy Services Factory Worker
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/services-factory/**'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: apps/services-factory
+        run: npm ci || echo "No package.json found, skipping install"
+
+      - name: Build & Deploy Worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: apps/services-factory
+

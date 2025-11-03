@@ -1,0 +1,678 @@
+{
+    "orchestrator-worker": [
+      {
+        "source_path": "wrangler.jsonc",
+        "target_repo": "factory/orchestrator",
+        "action": "adapt",
+        "dependencies": [
+          "D1",
+          "DurableObjects",
+          "R2",
+          "KV",
+          "Containers",
+          "AI",
+          "Dispatch"
+        ],
+        "notes": "Master definition for Mission Control. Rename bindings."
+      },
+      {
+        "source_path": "package.json",
+        "target_repo": "factory/orchestrator",
+        "action": "adapt",
+        "dependencies": [
+          "npm",
+          "vite",
+          "wrangler"
+        ],
+        "notes": "Will serve as the monorepo root. Adapt scripts for multi-worker."
+      },
+      {
+        "source_path": "vite.config.ts",
+        "target_repo": "factory/orchestrator",
+        "action": "reuse",
+        "dependencies": [
+          "@cloudflare/vite-plugin"
+        ],
+        "notes": "Perfect config for bridging Vite frontend with Worker backend."
+      },
+      {
+        "source_path": "tsconfig.json",
+        "target_repo": "factory/orchestrator",
+        "action": "reuse",
+        "dependencies": [
+          "TypeScript"
+        ],
+        "notes": "Root TypeScript config."
+      },
+      {
+        "source_path": "tsconfig.worker.json",
+        "target_repo": "factory/orchestrator",
+        "action": "reuse",
+        "dependencies": [
+          "TypeScript"
+        ],
+        "notes": "Worker-specific TypeScript config."
+      },
+      {
+        "source_path": "worker/index.ts",
+        "target_repo": "factory/orchestrator",
+        "action": "adapt",
+        "dependencies": [
+          "Hono",
+          "DurableObjects",
+          "Assets"
+        ],
+        "notes": "Core dual-domain routing logic. Adapt for MC dashboard vs. agent services."
+      },
+      {
+        "source_path": "worker/app.ts",
+        "target_repo": "factory/orchestrator",
+        "action": "reuse",
+        "dependencies": [
+          "Hono",
+          "CSRF",
+          "Security"
+        ],
+        "notes": "Core Hono server setup with all essential middleware."
+      },
+      {
+        "source_path": "worker/api/routes/index.ts",
+        "target_repo": "factory/orchestrator",
+        "action": "adapt",
+        "dependencies": [
+          "Hono"
+        ],
+        "notes": "Main API gateway. Will be adapted to import routes from all factories."
+      },
+      {
+        "source_path": "worker/services/aigateway-proxy/controller.ts",
+        "target_repo": "factory/orchestrator",
+        "action": "reuse",
+        "dependencies": [
+          "AI Binding"
+        ],
+        "notes": "Core AI Gateway proxy logic. Belongs in the global orchestrator."
+      },
+      {
+        "source_path": ".github/workflows",
+        "target_repo": "factory/orchestrator",
+        "action": "adapt",
+        "dependencies": [
+          "GitHub Actions"
+        ],
+        "notes": "Adapt CI/CD workflows for the new monorepo structure."
+      },
+      {
+        "source_path": "scripts",
+        "target_repo": "factory/orchestrator",
+        "action": "adapt",
+        "dependencies": [
+          "Bun",
+          "tsx",
+          "Wrangler"
+        ],
+        "notes": "Adapt for `colby` CLI deployment and env setup."
+      },
+      {
+        "source_path": "worker/config",
+        "target_repo": "factory/orchestrator",
+        "action": "reuse",
+        "dependencies": [
+          "TypeScript"
+        ],
+        "notes": "Global configuration management (CORS, Headers, etc.)."
+      }
+    ],
+    "agent-factory": [
+      {
+        "source_path": "worker/agents/core/smartGeneratorAgent.ts",
+        "target_repo": "factory/agent",
+        "action": "adapt",
+        "dependencies": [
+          "DurableObjects",
+          "AI Binding",
+          "WebSocket",
+          "Agents SDK"
+        ],
+        "notes": "CRITICAL. Refactor from CodeGeneratorAgent to generic BaseAgent DO."
+      },
+      {
+        "source_path": "worker/agents/core/websocket.ts",
+        "target_repo": "factory/agent",
+        "action": "adapt",
+        "dependencies": [
+          "WebSocket",
+          "DurableObjects"
+        ],
+        "notes": "Adapt WebSocket protocol from Vibe-specific to generic AGENT_RUN."
+      },
+      {
+        "source_path": "worker/agents/core/state.ts",
+        "target_repo": "factory/agent",
+        "action": "adapt",
+        "dependencies": [
+          "DurableObjects"
+        ],
+        "notes": "Generalize agent state to support any mission (e.g., CrewAI state)."
+      },
+      {
+        "source_path": "worker/agents/core/types.ts",
+        "target_repo": "factory/agent",
+        "action": "adapt",
+        "dependencies": [
+          "TypeScript"
+        ],
+        "notes": "Core types for the agent DO."
+      },
+      {
+        "source_path": "worker/agents/index.ts",
+        "target_repo": "factory/agent",
+        "action": "adapt",
+        "dependencies": [
+          "DurableObjects"
+        ],
+        "notes": "DO stub helpers. Reusable pattern."
+      },
+      {
+        "source_path": "worker/agents/tools/toolkit",
+        "target_repo": "factory/agent",
+        "action": "reuse",
+        "dependencies": [
+          "Agents SDK"
+        ],
+        "notes": "Excellent library of pre-built tools. Move to `colby` toolbox."
+      },
+      {
+        "source_path": "worker/agents/planning",
+        "target_repo": "factory/agent",
+        "action": "adapt",
+        "dependencies": [
+          "AI Binding"
+        ],
+        "notes": "Blueprint/planning pattern is valuable. Adapt for LangGraph."
+      },
+      {
+        "source_path": "worker/agents/operations",
+        "target_repo": "factory/agent",
+        "action": "adapt",
+        "dependencies": [
+          "AI Binding"
+        ],
+        "notes": "Phase-based execution pattern is valuable. Adapt for LangGraph."
+      },
+      {
+        "source_path": "worker/api/routes/codegenRoutes.ts",
+        "target_repo": "factory/agent",
+        "action": "adapt",
+        "dependencies": [
+          "Hono",
+          "DurableObjects"
+        ],
+        "notes": "This is the HTTP/WebSocket entrypoint. Refactor to /api/agent/v1/run."
+      }
+    ],
+    "data-factory": [
+      {
+        "source_path": "worker/database/schema.ts",
+        "target_repo": "factory/data",
+        "action": "reuse",
+        "dependencies": [
+          "drizzle-orm",
+          "D1"
+        ],
+        "notes": "MASSIVE ACCELERATOR. Core schema for users, sessions, secrets, etc."
+      },
+      {
+        "source_path": "migrations",
+        "target_repo": "factory/data",
+        "action": "reuse",
+        "dependencies": [
+          "D1",
+          "drizzle-kit"
+        ],
+        "notes": "Full D1 migration history. We will append our own."
+      },
+      {
+        "source_path": "drizzle.config.local.ts",
+        "target_repo": "factory/data",
+        "action": "reuse",
+        "dependencies": [
+          "drizzle-kit"
+        ],
+        "notes": "Drizzle config for local development."
+      },
+      {
+        "source_path": "drizzle.config.remote.ts",
+        "target_repo": "factory/data",
+        "action": "reuse",
+        "dependencies": [
+          "drizzle-kit"
+        ],
+        "notes": "Drizzle config for remote production D1."
+      },
+      {
+        "source_path": "worker/database/database.ts",
+        "target_repo": "factory/data",
+        "action": "reuse",
+        "dependencies": [
+          "drizzle-orm",
+          "D1"
+        ],
+        "notes": "Drizzle D1 adapter logic."
+      },
+      {
+        "source_path": "worker/database/services",
+        "target_repo": "factory/data",
+        "action": "reuse",
+        "dependencies": [
+          "drizzle-orm",
+          "D1"
+        ],
+        "notes": "Drizzle query services (AuthService, AppService). We will copy this pattern."
+      }
+    ],
+    "services-factory": [
+      {
+        "source_path": "worker/api/controllers",
+        "target_repo": "factory/services",
+        "action": "reuse",
+        "dependencies": [
+          "Hono",
+          "Data Factory"
+        ],
+        "notes": "All API implementation logic. Reusable."
+      },
+      {
+        "source_path": "worker/api/routes/authRoutes.ts",
+        "target_repo": "factory/services",
+        "action": "reuse",
+        "dependencies": [
+          "Hono"
+        ],
+        "notes": "Auth service routes."
+      },
+      {
+        "source_path": "worker/api/routes/userRoutes.ts",
+        "target_repo": "factory/services",
+        "action": "reuse",
+        "dependencies": [
+          "Hono"
+        ],
+        "notes": "User service routes."
+      },
+      {
+        "source_path": "worker/api/routes/secretsRoutes.ts",
+        "target_repo": "factory/services",
+        "action": "reuse",
+        "dependencies": [
+          "Hono"
+        ],
+        "notes": "Secrets service routes."
+      },
+      {
+        "source_path": "worker/api/routes/modelConfigRoutes.ts",
+        "target_repo": "factory/services",
+        "action": "reuse",
+        "dependencies": [
+          "Hono"
+        ],
+        "notes": "Model config service routes."
+      },
+      {
+        "source_path": "worker/api/routes/modelProviderRoutes.ts",
+        "target_repo": "factory/services",
+        "action": "reuse",
+        "dependencies": [
+          "Hono"
+        ],
+        "notes": "Model provider service routes."
+      },
+      {
+        "source_path": "worker/api/routes/githubExporterRoutes.ts",
+        "target_repo": "factory/services",
+        "action": "reuse",
+        "dependencies": [
+          "Hono"
+        ],
+        "notes": "GitHub export service routes."
+      },
+      {
+        "source_path": "worker/api/routes/analyticsRoutes.ts",
+        "target_repo": "factory/services",
+        "action": "reuse",
+        "dependencies": [
+          "Hono"
+        ],
+        "notes": "Analytics service routes."
+      },
+      {
+        "source_path": "worker/api/routes/appRoutes.ts",
+        "target_repo": "factory/services",
+        "action": "adapt",
+        "dependencies": [
+          "Hono"
+        ],
+        "notes": "Adapt from 'apps' to generic 'inventory' service routes."
+      },
+      {
+        "source_path": "worker/middleware",
+        "target_repo": "factory/services",
+        "action": "reuse",
+        "dependencies": [
+          "Hono",
+          "JWT"
+        ],
+        "notes": "Reusable auth and security middleware."
+      },
+      {
+        "source_path": "worker/services/github",
+        "target_repo": "factory/services",
+        "action": "reuse",
+        "dependencies": [
+          "Octokit"
+        ],
+        "notes": "Reusable GitHub API client service."
+      },
+      {
+        "source_path": "worker/services/oauth",
+        "target_repo": "factory/services",
+        "action": "reuse",
+        "dependencies": [
+          "OAuth"
+        ],
+        "notes": "Reusable OAuth2 flow handlers (GitHub, Google)."
+      },
+      {
+        "source_path": "worker/services/sandbox",
+        "target_repo": "factory/services",
+        "action": "reuse",
+        "dependencies": [
+          "Cloudflare Containers",
+          "DurableObjects"
+        ],
+        "notes": "Highly valuable service for sandboxing and deploying user code."
+      },
+      {
+        "source_path": "worker/services/rate-limit",
+        "target_repo": "factory/services",
+        "action": "reuse",
+        "dependencies": [
+          "Rate Limiter Binding",
+          "DurableObjects"
+        ],
+        "notes": "Production-grade rate limiting service."
+      },
+      {
+        "source_path": "worker/services/cache",
+        "target_repo": "factory/services",
+        "action": "reuse",
+        "dependencies": [
+          "KV"
+        ],
+        "notes": "Simple, effective KV-based cache service."
+      },
+      {
+        "source_path": "worker/utils/authUtils.ts",
+        "target_repo": "factory/services",
+        "action": "reuse",
+        "dependencies": [
+          "TypeScript"
+        ],
+        "notes": "Auth utilities."
+      },
+      {
+        "source_path": "worker/utils/jwtUtils.ts",
+        "target_repo": "factory/services",
+        "action": "reuse",
+        "dependencies": [
+          "jose"
+        ],
+        "notes": "JWT utilities."
+      },
+      {
+        "source_path": "worker/utils/cryptoUtils.ts",
+        "target_repo": "factory/services",
+        "action": "reuse",
+        "dependencies": [
+          "TypeScript"
+        ],
+        "notes": "Password hashing utilities."
+      },
+      {
+        "source_path": "worker/utils/ErrorHandling.ts",
+        "target_repo": "factory/services",
+        "action": "reuse",
+        "dependencies": [
+          "TypeScript"
+        ],
+        "notes": "Standardized error classes."
+      }
+    ],
+    "ui-factory": [
+      {
+        "source_path": "src",
+        "target_repo": "factory/ui",
+        "action": "reuse",
+        "dependencies": [
+          "React",
+          "Vite",
+          "ShadCN",
+          "Tailwind"
+        ],
+        "notes": "The entire Vibe frontend. This is the UI Factory's main product."
+      },
+      {
+        "source_path": "src/components/ui",
+        "target_repo": "factory/ui",
+        "action": "reuse",
+        "dependencies": [
+          "ShadCN",
+          "React"
+        ],
+        "notes": "The core ShadCN component library."
+      },
+      {
+        "source_path": "components.json",
+        "target_repo": "factory/ui",
+        "action": "reuse",
+        "dependencies": [
+          "ShadCN"
+        ],
+        "notes": "ShadCN configuration file."
+      },
+      {
+        "source_path": "src/index.css",
+        "target_repo": "factory/ui",
+        "action": "reuse",
+        "dependencies": [
+          "Tailwind"
+        ],
+        "notes": "Tailwind CSS and theme configuration."
+      },
+      {
+        "source_path": "src/components/layout",
+        "target_repo": "factory/ui",
+        "action": "reuse",
+        "dependencies": [
+          "React"
+        ],
+        "notes": "Main dashboard shell (AppLayout, AppSidebar). Our core layout."
+      },
+      {
+        "source_path": "src/routes/chat/chat.tsx",
+        "target_repo": "factory/ui",
+        "action": "adapt",
+        "dependencies": [
+          "React",
+          "Monaco",
+          "WebSocket"
+        ],
+        "notes": "Key UI template. Adapt this 3-panel layout for generic Agent Interaction."
+      },
+      {
+        "source_path": "src/routes/chat/hooks/use-chat.ts",
+        "target_repo": "factory/ui",
+        "action": "adapt",
+        "dependencies": [
+          "WebSocket"
+        ],
+        "notes": "Refactor this monolithic hook into a global Zustand store."
+      },
+      {
+        "source_path": "src/routes/chat/components/phase-timeline.tsx",
+        "target_repo": "factory/ui",
+        "action": "reuse",
+        "dependencies": [
+          "React"
+        ],
+        "notes": "Excellent component for visualizing agent task execution."
+      },
+      {
+        "source_path": "src/routes/settings/index.tsx",
+        "target_repo": "factory/ui",
+        "action": "reuse",
+        "dependencies": [
+          "React",
+          "ShadCN"
+        ],
+        "notes": "Perfect, tabbed UI for managing Profile, Models, and Secrets."
+      },
+      {
+        "source_path": "src/routes/apps/index.tsx",
+        "target_repo": "factory/ui",
+        "action": "adapt",
+        "dependencies": [
+          "React",
+          "ShadCN"
+        ],
+        "notes": "Adapt this into our main 'Inventory' dashboard."
+      },
+      {
+        "source_path": "src/contexts/auth-context.tsx",
+        "target_repo": "factory/ui",
+        "action": "adapt",
+        "dependencies": [
+          "React Context"
+        ],
+        "notes": "Refactor into a global Zustand store (useAuthStore)."
+      },
+      {
+        "source_path": "src/hooks",
+        "target_repo": "factory/ui",
+        "action": "adapt",
+        "dependencies": [
+          "React"
+        ],
+        "notes": "Refactor all data-fetching hooks (use-apps, etc.) to use React Query."
+      },
+      {
+        "source_path": "src/lib/api-client.ts",
+        "target_repo": "factory/ui",
+        "action": "reuse",
+        "dependencies": [
+          "fetch"
+        ],
+        "notes": "Solid, reusable fetch wrapper."
+      }
+    ],
+    "memory-library": [
+      {
+        "source_path": "shared/types/errors.ts",
+        "target_repo": "factory/shared-types",
+        "action": "reuse",
+        "dependencies": [
+          "TypeScript"
+        ],
+        "notes": "Core shared error types."
+      },
+      {
+        "source_path": "src/api-types.ts",
+        "target_repo": "factory/shared-types",
+        "action": "reuse",
+        "dependencies": [
+          "TypeScript",
+          "Zod"
+        ],
+        "notes": "Critical types shared between frontend and backend."
+      },
+      {
+        "source_path": "worker/api/websocketTypes.ts",
+        "target_repo": "factory/shared-types",
+        "action": "adapt",
+        "dependencies": [
+          "TypeScript"
+        ],
+        "notes": "Move to shared lib and adapt for generic agent protocol."
+      },
+      {
+        "source_path": "worker/agents/schemas.ts",
+        "target_repo": "factory/memory-library",
+        "action": "adapt",
+        "dependencies": [
+          "Zod"
+        ],
+        "notes": "Good base for agent tool/memory schemas. Will inform Prompt Library."
+      },
+      {
+        "source_path": "worker/agents/constants.ts",
+        "target_repo": "factory/shared-types",
+        "action": "reuse",
+        "dependencies": [
+          "TypeScript"
+        ],
+        "notes": "Constants for WebSocket messages."
+      }
+    ],
+    "ignore": [
+      {
+        "source_path": "README.md",
+        "action": "ignore",
+        "notes": "Vibe-specific branding and documentation."
+      },
+      {
+        "source_path": "LICENSE",
+        "action": "ignore",
+        "notes": "Will be replaced with Mission Control license."
+      },
+      {
+        "source_path": "CLAUDE.md",
+        "action": "ignore",
+        "notes": "Vibe-specific documentation."
+      },
+      {
+        "source_path": "CHANGELOG.md",
+        "action": "ignore",
+        "notes": "Vibe-specific changelog."
+      },
+      {
+        "source_path": "samplePrompts.md",
+        "action": "ignore",
+        "notes": "Vibe-specific prompts."
+      },
+      {
+        "source_path": "docs",
+        "action": "ignore",
+        "notes": "All Vibe documentation."
+      },
+      {
+        "source_path": "debug-tools",
+        "action": "ignore",
+        "notes": "Local debug scripts, not part of production."
+      },
+      {
+        "source_path": "container",
+        "action": "ignore",
+        "notes": "Demo container code. We only need the *pattern* from wrangler.jsonc."
+      },
+      {
+        "source_path": "SandboxDockerfile",
+        "action": "ignore",
+        "notes": "We will reference the pre-built image, not the Dockerfile itself."
+      },
+      {
+        "source_path": ".dev.vars.example",
+        "action": "ignore",
+        "notes": "Example environment file."
+      }
+    ]
+}
