@@ -41,7 +41,7 @@ export async function cloneAgent(env: Env, agentId: string) : Promise<{newAgentI
         sessionId: newAgentId,
         sandboxInstanceId: undefined,
         pendingUserInputs: [],
-        currentDevState: 0,
+        currentDevState: CurrentDevState.IDLE,
         generationPromise: undefined,
         shouldBeGenerating: false,
         // latestScreenshot: undefined,
