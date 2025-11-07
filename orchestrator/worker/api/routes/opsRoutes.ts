@@ -3,7 +3,7 @@
  */
 
 import { Hono } from 'hono'
-import { OpsSpecialist } from '../../../ops-specialist'
+import { OpsSpecialist } from '../../../../apps/ops-specialists/ops-specialist'
 import type { Env } from '../../types'
 
 const app = new Hono<{ Bindings: Env }>()

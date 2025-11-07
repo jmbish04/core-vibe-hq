@@ -1,0 +1,43 @@
+---
+description: "Checklist for new features involving database access"
+globs:
+  - "**/*.ts"
+  - "**/wrangler.jsonc"
+alwaysApply: true
+---
+
+# Checklist for New Features
+
+When adding a feature that involves database access or infrastructure:
+
+- [ ] Does it use Workers for Platforms features?
+  - [ ] If yes: **STOP** - This project uses paid Workers only, not Workers for Platforms
+  - [ ] Remove any `dispatch_namespaces` or dispatch-related code
+  - [ ] Use service bindings or HTTP fetch instead
+
+- [ ] Does it require database access from an apps/ worker?
+  - [ ] If yes: Create orchestrator entrypoint
+  - [ ] Add service binding to `@shared/base/wrangler.base.jsonc`
+  - [ ] Apps worker calls via service binding
+- [ ] Does it require orchestrator to call an apps/ worker?
+  - [ ] If yes: Add service binding to `orchestrator/wrangler.jsonc`
+  - [ ] Apps worker exposes WorkerEntrypoint class
+- [ ] Are new tables needed?
+  - [ ] Add to `orchestrator/worker/database/schema.ts` using Drizzle
+  - [ ] Run `npm run db:generate` to create migration
+  - [ ] Migrations go in `orchestrator/migrations/` only
+- [ ] Is documentation needed?
+  - [ ] Create markdown file in `docs/` folder
+  - [ ] Update `docs/OVERVIEW.md` with entry
+
+- [ ] Does it create a new worker?
+  - [ ] If yes: **MUST** create deploy workflow in `.github/workflows/deploy-[worker-name].yml`
+  - [ ] Workflow includes proper triggers (push to main, workflow_dispatch)
+  - [ ] Workflow includes dependency installation and deployment steps
+
+- [ ] Before reporting completion:
+  - [ ] Run `npm run problems` and resolve ALL errors
+  - [ ] Verify no TypeScript errors (`typecheck:all`)
+  - [ ] Verify no linting errors (`lint:all`)
+  - [ ] Verify Wrangler types generate successfully (`types:all`)
+  - [ ] Check Problems tab in Cursor/VSCode - should be empty

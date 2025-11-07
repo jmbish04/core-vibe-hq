@@ -1,0 +1,158 @@
+---
+description: "TypeScript best practices - no shortcuts, proper type safety"
+globs:
+  - "**/*.ts"
+  - "**/*.tsx"
+alwaysApply: true
+---
+
+# TypeScript Best Practices - CRITICAL
+
+## ⚠️ NO SHORTCUTS FOR TYPE ERRORS
+
+**NEVER use type assertions or shortcuts to bypass TypeScript errors:**
+
+- ❌ **NEVER** use `as any` to fix type errors
+- ❌ **NEVER** use `as unknown as T` to bypass type checking
+- ❌ **NEVER** use `@ts-ignore` or `@ts-expect-error` without proper justification
+- ❌ **NEVER** use `// @ts-nocheck` to disable type checking
+- ❌ **NEVER** cast to `any` type to silence errors
+
+## ✅ PROPER TYPE FIXING
+
+**When encountering TypeScript errors, you MUST:**
+
+1. **Understand the root cause**: Read the error message carefully
+2. **Fix the types properly**: 
+   - Update type definitions
+   - Add proper type guards
+   - Use correct generic types
+   - Fix interface/type mismatches
+3. **Use proper type narrowing**: Use `instanceof`, `typeof`, type guards, or discriminated unions
+4. **Update shared types**: If types are incorrect in `@shared/types/`, fix them there
+5. **Add missing types**: Create proper interfaces/types instead of using `any`
+
+## Examples of PROPER Fixes
+
+### ✅ Good: Proper Type Definition
+```typescript
+interface UserResponse {
+  id: string
+  name: string
+  email: string
+}
+
+async function getUser(id: string): Promise<UserResponse> {
+  const response = await fetch(`/api/users/${id}`)
+  return response.json() // TypeScript infers from return type
+}
+```
+
+### ✅ Good: Type Guard
+```typescript
+function isUserResponse(obj: unknown): obj is UserResponse {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'id' in obj &&
+    'name' in obj &&
+    'email' in obj
+  )
+}
+
+const data = await response.json()
+if (isUserResponse(data)) {
+  // TypeScript knows data is UserResponse here
+  console.log(data.name)
+}
+```
+
+### ✅ Good: Proper Generic Types
+```typescript
+function executeRpc<T>(
+  methodName: string,
+  params: Record<string, unknown>
+): Promise<ToolResult<T>> {
+  // Proper generic usage
+}
+```
+
+### ❌ Bad: Using `as any`
+```typescript
+// WRONG - Never do this
+const result = await response.json() as any
+const user = result.user as any
+```
+
+### ❌ Bad: Using `@ts-ignore`
+```typescript
+// @ts-ignore - Type error here
+const data = await response.json()
+```
+
+## When Type Assertions Are Acceptable
+
+**Only in very specific, documented cases:**
+
+1. **Type narrowing with runtime checks**: When you've verified the type at runtime
+   ```typescript
+   if (typeof value === 'string' && value.length > 0) {
+     const str: string = value // OK - runtime check verified
+   }
+   ```
+
+2. **Known type compatibility**: When you have external documentation proving types match
+   ```typescript
+   // Only if you have documentation that this API always returns UserResponse
+   const user = await response.json() as UserResponse
+   // But prefer: await response.json<UserResponse>()
+   ```
+
+3. **Legacy code migration**: When migrating from JavaScript, with a TODO to fix
+   ```typescript
+   // TODO: Fix type definition for legacy API
+   const legacyData = response.data as LegacyType
+   ```
+
+## Type Error Resolution Process
+
+1. **Read the error**: Understand what TypeScript is complaining about
+2. **Check type definitions**: Look at `@shared/types/` or relevant type files
+3. **Fix the root cause**: 
+   - Update type definitions if needed
+   - Add proper type guards
+   - Use correct generic parameters
+   - Fix interface mismatches
+4. **Verify**: Ensure the fix doesn't break other parts of the codebase
+5. **Document**: If a type assertion is necessary, document WHY it's safe
+
+## Agent Instructions
+
+**When the AI agent encounters TypeScript errors:**
+
+- ❌ **DO NOT** suggest using `as any` or `as unknown as T`
+- ❌ **DO NOT** suggest adding `@ts-ignore` comments
+- ✅ **DO** investigate the type definitions
+- ✅ **DO** fix the types properly
+- ✅ **DO** add type guards if needed
+- ✅ **DO** update shared types if they're incorrect
+- ✅ **DO** ask for clarification if the type error is unclear
+
+## Running Type Checks
+
+**Before reporting completion, run:**
+
+```bash
+npm run typecheck:all
+```
+
+**All TypeScript errors must be resolved properly, not bypassed.**
+
+## Common Type Error Patterns to Fix Properly
+
+1. **Missing type definitions**: Add proper interfaces/types
+2. **Incorrect generic usage**: Use proper generic constraints
+3. **Interface mismatches**: Update interfaces to match actual data
+4. **Union type narrowing**: Use type guards or discriminated unions
+5. **Optional property access**: Use optional chaining and nullish coalescing
+6. **Array/object type inference**: Add explicit types or use `as const`

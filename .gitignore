@@ -5,6 +5,9 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
+problems.log
+problems-analysis.json
+problems-checklist.md
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
@@ -146,3 +149,22 @@ vite.config.ts.timestamp-*
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+dev-debug.log
+# Environment variables
+# Editor directories and files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+# OS specific
+
+# Task files
+# tasks.json
+# tasks/ 
+
+# STAGING folder - reference code, not part of main repository
+STAGING/

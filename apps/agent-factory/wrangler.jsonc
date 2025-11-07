@@ -1,0 +1,27 @@
+/**
+ * Agent Factory Worker Configuration
+ * 
+ * Extends the shared base configuration. All database operations
+ * go through orchestrator service bindings.
+ */
+{
+  "$ref": "../../@shared/base/wrangler.base.jsonc",
+  
+  "name": "agent-factory",
+  "main": "worker/index.ts",
+  
+  // Development settings with unique port
+  "dev": {
+    "port": 8788,
+    "local_protocol": "http"
+  },
+  
+  // Agent Factory specific environment variables
+  "vars": {
+    "FACTORY_TYPE": "agent",
+    "MAX_CONCURRENT_AGENTS": "10",
+    "DEFAULT_MODEL": "@cf/openai/gpt-oss-120b",
+    "WORKER_NAME": "Agent Factory",
+    "DIAGNOSTICS_ENABLED": "true"
+  }
+}

@@ -1,0 +1,103 @@
+---
+description: "Problem resolution requirements - clear all errors before reporting feature complete"
+globs:
+  - "**/*.ts"
+  - "**/*.tsx"
+  - "**/*.json"
+  - "**/*.jsonc"
+alwaysApply: true
+---
+
+# Problem Resolution Before Feature Completion - CRITICAL
+
+## ⚠️ CRITICAL: Clear All Problems Before Reporting Completion
+
+**Before reporting that a feature is fully implemented, you MUST:**
+
+### 1. Run Comprehensive Problem Check
+
+Run `npm run problems` which executes:
+- `typecheck:all` - TypeScript type checking across all workers
+- `lint:all` - Linting across all workers
+- `types:all` - Wrangler type generation for all workers
+
+### 2. Resolve ALL Errors
+
+You must fix:
+- ✅ All TypeScript compilation errors
+- ✅ All linting errors
+- ✅ All `wrangler types` generation failures
+- ✅ All import/export issues
+- ✅ All missing dependencies
+- ✅ All type definition errors
+
+**⚠️ CRITICAL**: When fixing TypeScript errors:
+- ❌ **NEVER** use `as any` or type shortcuts to bypass errors
+- ❌ **NEVER** use `@ts-ignore` or `@ts-expect-error` without proper justification
+- ✅ **ALWAYS** fix types properly (update type definitions, add type guards, use correct generics)
+- ✅ **ALWAYS** understand the root cause of the error before fixing
+
+### 3. Verify No Regressions
+
+- ✅ Ensure existing functionality still works
+- ✅ Check that no new warnings were introduced
+- ✅ Verify all workers can still deploy
+- ✅ Verify all workers can still build
+
+### 4. Check Problems Tab in Cursor/VSCode
+
+The `npm run problems` script should mirror what you see in the Problems tab:
+- The Problems tab should be empty (or only contain acceptable warnings)
+- All red errors must be resolved
+- All yellow warnings should be reviewed and addressed if critical
+
+### 5. Only After All Problems Are Resolved
+
+**Only after ALL problems are cleared**, you may report feature completion.
+
+## Available Scripts for Problem Checking
+
+From the root `package.json`:
+
+- `npm run problems` - Comprehensive check (TypeScript + Linting + Wrangler types)
+- `npm run typecheck:all` - TypeScript type checking for all workers
+- `npm run lint:all` - Linting for all workers
+- `npm run types:all` - Wrangler type generation for all workers
+
+Individual worker checks:
+- `npm run typecheck:[worker-name]` - Type check specific worker
+- `npm run lint:[worker-name]` - Lint specific worker
+- `npm run types:[worker-name]` - Generate types for specific worker
+
+## Common Problem Types to Check
+
+1. **TypeScript Errors**:
+   - Type mismatches - Fix by updating type definitions, not using `as any`
+   - Missing type definitions - Add proper interfaces/types, don't use `@ts-ignore`
+   - Import/export errors - Fix import paths and exports
+   - Unused variables/imports - Remove or use them
+   - **Remember**: NEVER use shortcuts like `as any` or `@ts-ignore` to bypass errors
+
+2. **Linting Errors**:
+   - Code style violations
+   - Unused imports
+   - Prettier formatting issues
+   - ESLint rule violations
+
+3. **Wrangler Type Errors**:
+   - Missing `wrangler.jsonc` configuration
+   - Invalid binding definitions
+   - Missing environment variables
+   - Type generation failures
+
+4. **Runtime Errors**:
+   - Missing dependencies in `package.json`
+   - Incorrect import paths
+   - Missing exports
+
+## Failure to Clear Problems
+
+If you report feature completion without clearing all problems:
+- The feature is NOT complete
+- You must continue fixing errors
+- Do not mark the feature as done until all errors are resolved

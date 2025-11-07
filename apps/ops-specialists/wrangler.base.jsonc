@@ -1,0 +1,39 @@
+/**
+ * Ops Specialists Worker Configuration
+ * 
+ * Extends the shared base configuration with ops-specialists-specific settings.
+ */
+{
+  "$ref": "../../@shared/base/wrangler.base.jsonc",
+  
+  // Ops Specialists specific settings
+  "name": "ops-specialists",
+  "main": "worker/index.ts",
+  
+  // NOTE: No D1 database binding - all database operations go through orchestrator service bindings
+  // Use ORCHESTRATOR_* service bindings defined in wrangler.base.jsonc for database access
+  
+  // Queue bindings for processing operations
+  "queues": {
+    "consumers": [
+      {
+        "queue": "ops-tasks",
+        "max_batch_size": 10,
+        "max_batch_timeout": 30,
+        "max_retries": 3
+      }
+    ],
+    "producers": [
+      {
+        "binding": "OPS_QUEUE",
+        "queue": "ops-tasks"
+      }
+    ]
+  },
+  
+  // Ops-specific environment variables
+  "vars": {
+    "OPS_LOG_LEVEL": "debug",
+    "MAX_CONCURRENT_OPS": "5"
+  }
+}

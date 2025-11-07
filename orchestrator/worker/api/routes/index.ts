@@ -14,6 +14,10 @@ import { Hono } from "hono";
 import { AppEnv } from "../../../packages/shared-types/src/api-types";
 import { setupStatusRoutes } from './statusRoutes';
 import { opsRoutes } from './opsRoutes';
+import { agentRoutes } from './agentRoutes';
+import { factoryRoutes } from './factoryRoutes';
+import { dockerfileAgentApi } from '../../agents/dockerfileSpecialist';
+import { coordsApi } from './coordRoutes';
 
 export function setupRoutes(app: Hono<AppEnv>): void {
     // Health check route
@@ -29,6 +33,19 @@ export function setupRoutes(app: Hono<AppEnv>): void {
     
     // Ops Specialist routes
     app.route('/ops', opsRoutes);
+    
+    // Agent routes
+    app.route('/api/agents', agentRoutes);
+
+    // Factory management routes
+    app.route('/api/factories', factoryRoutes);
+
+    // Dockerfile specialist routes
+    app.route('/api/dockerfile', dockerfileAgentApi);
+    app.route('/api/containers', dockerfileAgentApi);
+
+    // Coordinate resolver routes
+    app.route('/api/coords', coordsApi);
 
     // Authentication and user management routes
     setupAuthRoutes(app);

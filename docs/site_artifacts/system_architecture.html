@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Core Vibe HQ - System Architecture</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        .diagram-box {
+            background-color: white;
+            border: 2px solid #0044FF;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            text-align: center;
+            font-weight: 600;
+            color: #0044FF;
+            box-shadow: 0 4px 12px rgba(0, 68, 255, 0.1);
+        }
+        .diagram-box-alt {
+            background-color: #f0f5ff;
+            border: 2px solid #A149FF;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            text-align: center;
+            font-weight: 600;
+            color: #A149FF;
+            box-shadow: 0 4px 12px rgba(161, 73, 255, 0.1);
+        }
+        .diagram-box-sub {
+            background-color: white;
+            border: 1px solid #33D1FF;
+            border-radius: 0.5rem;
+            padding: 0.5rem 1rem;
+            text-align: center;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #0044FF;
+        }
+        .flow-arrow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0.5rem 0;
+            color: #A149FF;
+            font-weight: bold;
+            font-size: 2rem;
+        }
+        .flow-arrow-horizontal {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 0.5rem;
+            color: #A149FF;
+            font-weight: bold;
+            font-size: 2rem;
+            transform: rotate(-90deg);
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 400px;
+                max-height: 450px;
+            }
+        }
+    </style>
+</head>
+<body class="text-gray-900">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+
+        <header class="text-center my-12 md:my-16">
+            <h1 class="text-4xl md:text-6xl font-black text-gray-900 leading-tight">
+                Core Vibe HQ: System Architecture
+            </h1>
+            <p class="text-xl md:text-2xl text-gray-600 mt-4 max-w-3xl mx-auto">
+                A technical deep-dive into the autonomous, serverless development platform.
+            </p>
+        </header>
+
+        <section class="mb-16 md:mb-24">
+            <div class="text-center max-w-3xl mx-auto">
+                <h2 class="text-4xl font-bold text-gray-900 mb-4">Overall System Diagram</h2>
+                <p class="text-lg text-gray-600 mb-10">
+                    Core Vibe HQ runs on a serverless, microservice architecture composed of "Factories," "Specialists," and an "Orchestrator" that manage the flow of "Orders" (development tasks).
+                </p>
+            </div>
+            
+            <div class="w-full overflow-x-auto p-4 bg-white rounded-lg shadow-xl">
+                <div class="min-w-[800px]">
+                    <div class="diagram-box max-w-sm mx-auto">
+                        👤 User
+                    </div>
+                    <div class="flow-arrow" role="img" aria-label="down arrow">↓</div>
+                    <div class="diagram-box max-w-sm mx-auto">
+                        <span class="font-bold text-lg">UI Factory</span> (React, Vite, Monaco)
+                        <div class="text-sm font-normal text-gray-600">The In-Browser IDE</div>
+                    </div>
+                    <div class="flow-arrow" role="img" aria-label="down arrow">↓</div>
+                    <div class="diagram-box max-w-sm mx-auto">
+                        <span class="font-bold text-lg">Services Factory</span> (Hono, API Gateway)
+                        <div class="text-sm font-normal text-gray-600">BFF, Auth, Sandbox Provisioner</div>
+                    </div>
+                    <div class="flow-arrow" role="img" aria-label="down arrow">↓</div>
+                    <div class="diagram-box-alt max-w-sm mx-auto">
+                        <span class="font-bold text-lg">Orchestrator</span> (Task Queues)
+                        <div class="text-sm font-normal text-gray-600">The Project Manager</div>
+                    </div>
+                    
+                    <div class="relative h-24 flex justify-center">
+                        <div class="absolute top-0 left-1/2 w-0.5 h-12 bg-purple-400"></div>
+                        <div class="absolute top-12 left-[20%] w-[60%] h-0.5 bg-purple-400"></div>
+                        <div class="absolute top-12 left-[20%] w-0.5 h-12 bg-purple-400"></div>
+                        <div class="absolute top-12 left-1/2 w-0.5 h-12 bg-purple-400"></div>
+                        <div class="absolute top-12 right-[20%] w-0.5 h-12 bg-purple-400"></div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="diagram-box-alt">
+                            <span class="font-bold text-lg">Agent Factory</span>
+                            <div class="text-sm font-normal text-gray-600">The "Brains" (Blueprint, Toolkit)</div>
+                        </div>
+                        <div class="diagram-box-alt">
+                            <span class="font-bold text-lg">Data Factory</span>
+                            <div class="text-sm font-normal text-gray-600">Persistence (Drizzle, D1)</div>
+                        </div>
+                        <div class="diagram-box-alt">
+                            <span class="font-bold text-lg">Ops Specialists</span>
+                            <div class="text-sm font-normal text-gray-600">Expert Agents (e.g., Git Conflict)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-16 md:mb-24">
+            <div class="text-center max-w-3xl mx-auto">
+                <h2 class="text-4xl font-bold text-gray-900 mb-4">The Core "Factories"</h2>
+                <p class="text-lg text-gray-600 mb-10">
+                    Each "Factory" is an independent, serverless microservice (a Cloudflare Worker) with a specific responsibility.
+                </p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="bg-white rounded-lg shadow-xl p-6 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
+                    <h3 class="text-2xl font-bold text-[#0044FF] mb-2">1. UI Factory</h3>
+                    <p class="text-gray-600 mb-4">The user-facing in-browser IDE. It provides the chat interface, Monaco code editor, file explorer, and live preview. It communicates with the backend via REST API and WebSockets for real-time updates.</p>
+                    <div class="diagram-box-sub">Role: The Command Center</div>
+                </div>
+                <div class="bg-white rounded-lg shadow-xl p-6 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
+                    <h3 class="text-2xl font-bold text-[#0044FF] mb-2">2. Services Factory</h3>
+                    <p class="text-gray-600 mb-4">The central API Gateway (BFF). It handles user authentication (OAuth), manages secure sandboxes for code execution, and brokers requests between the UI and the backend systems like the Orchestrator and Data Factory.</p>
+                    <div class="diagram-box-sub">Role: The API Gateway</div>
+                </div>
+                <div class="bg-white rounded-lg shadow-xl p-6 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
+                    <h3 class="text-2xl font-bold text-[#0044FF] mb-2">3. Orchestrator</h3>
+                    <p class="text-gray-600 mb-4">The platform's project manager. It receives tasks (Orders) from the Services Factory and manages the asynchronous workflow via task queues. It proxies all AI calls, ensuring centralized control, and delegates work to the correct Agent Factory or Specialist.</p>
+                    <div class="diagram-box-sub">Role: The Conductor</div>
+                </div>
+                <div class="bg-white rounded-lg shadow-xl p-6 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 md:col-span-1 lg:col-span-1.5">
+                    <h3 class="text-2xl font-bold text-[#0044FF] mb-2">4. Agent Factory</h3>
+                    <p class="text-gray-600 mb-4">The "brains" of the operation. This is where the autonomous "Smart Generator" agent lives. It receives an Order, creates a "Blueprint" (a multi-phase plan), and then executes that plan using a "Toolkit" of functions (e.g., `generate-files`, `exec-commands`, `web-search`).</p>
+                    <div class="diagram-box-sub">Role: The Autonomous "Brains"</div>
+                </div>
+                <div class="bg-white rounded-lg shadow-xl p-6 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 md:col-span-1 lg:col-span-1.5">
+                    <h3 class="text-2xl font-bold text-[#0044FF] mb-2">5. Data Factory</h3>
+                    <p class="text-gray-600 mb-4">The dedicated persistence layer. It's a serverless worker that handles all database operations (CRUD) using Drizzle ORM on top of Cloudflare D1. It stores user info, app metadata, chat sessions, and API keys.</p>
+                    <div class="diagram-box-sub">Role: The Database Service</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-16 md:mb-24">
+            <div class="bg-white rounded-lg shadow-xl p-6 md:p-10">
+                <div class="grid md:grid-cols-2 gap-8 items-center">
+                    <div>
+                        <h2 class="text-3xl font-bold text-gray-900 mb-4">The Agent's Toolkit</h2>
+                        <p class="text-gray-600 text-lg mb-6">
+                            The `Agent Factory` is more than a simple LLM. It's an autonomous agent with a "Toolkit" of functions it can call to perform real development tasks, just like a human developer.
+                        </p>
+                        <p class="text-gray-600 text-lg">
+                            This chart visualizes the agent's versatile capabilities, which are orchestrated to complete complex "Orders."
+                        </p>
+                    </div>
+                    <div>
+                        <div class="chart-container">
+                            <canvas id="agentToolkitChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-16 md:mb-24">
+            <div class="text-center max-w-3xl mx-auto">
+                <h2 class="text-4xl font-bold text-gray-900 mb-4">The "Ops Specialists"</h2>
+                <p class="text-lg text-gray-600 mb-10">
+                    For highly specific tasks, the Orchestrator can delegate to specialized autonomous agents.
+                </p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white rounded-lg shadow-xl p-6 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
+                    <h3 class="text-2xl font-bold text-[#A149FF] mb-2">🔄 Conflict Specialist</h3>
+                    <p class="text-gray-600">An autonomous agent dedicated to resolving Git merge conflicts. When a user's changes conflict with the AI's, this specialist is invoked to analyze the diff and autonomously generate the correct, merged code.</p>
+                </div>
+                <div class="bg-white rounded-lg shadow-xl p-6 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
+                    <h3 class="text-2xl font-bold text-[#A149FF] mb-2">📊 Delivery Report Specialist</h3>
+                    <p class="text-gray-600">A worker responsible for aggregating data and generating reports. This can be used for analytics, summarizing an application's build, or creating delivery manifests for completed "Orders."</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-16 md:mb-24">
+            <div class="text-center max-w-3xl mx-auto">
+                <h2 class="text-4xl font-bold text-gray-900 mb-4">Anatomy of an "Order"</h2>
+                <p class="text-lg text-gray-600 mb-10">
+                    An "Order" is a full development task, like "Build a full-stack todo app." Here is the data flow from start to finish.
+                </p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
+                <div class="bg-white rounded-lg shadow-xl p-6 md:p-8">
+                    <h3 class="text-2xl font-bold text-gray-900 mb-6 text-center">App Build Lifecycle (Flow)</h3>
+                    <p class="text-gray-600 text-center mb-6">
+                        This is an <span class="font-bold text-[#A149FF]">iterative and event-driven</span> process, not a simple waterfall. The agent builds, you provide feedback, and the agent iterates.
+                    </p>
+                    <div class="flex flex-col space-y-4">
+                        <div class="diagram-box-sub">1. User sends prompt in <span class="font-bold">UI Factory</span></div>
+                        <div class="flow-arrow" role="img" aria-label="down arrow">↓</div>
+                        <div class="diagram-box-sub">2. API call to <span class="font-bold">Services Factory</span> (Auth)</div>
+                        <div class="flow-arrow" role="img" aria-label="down arrow">↓</div>
+                        <div class="diagram-box-sub">3. Task enqueued in <span class="font-bold">Orchestrator</span> (Async)</div>
+                        <div class="flow-arrow" role="img" aria-label="down arrow">↓</div>
+                        <div class="diagram-box-sub">4. <span class="font-bold">Agent Factory</span> generates "Blueprint" (Plan)</div>
+                        <div class="flow-arrow"D" role="img" aria-label="down arrow">↓</div>
+
+                        <div class="border-4 border-dashed border-[#A149FF] rounded-lg p-4 bg-purple-50">
+                            <h4 class="font-bold text-lg text-center text-[#A149FF] mb-4">Iterative Build Loop</h4>
+                            <div class="diagram-box-sub">5. Agent executes plan (Code, Run, Search)</div>
+                            <div class="flow-arrow" role="img" aria-label="down arrow">↓</div>
+                            <div class="diagram-box-sub">6. <span class="font-bold">Services Factory</span> deploys to Sandbox Preview</div>
+                            <div class="flow-arrow" role="img" aria-label="down arrow">↓</div>
+                            <div class="diagram-box-sub">7. User gives feedback (e.g., Screenshot)</div>
+                            <div class="flow-arrow" role="img" aria-label="down arrow">↓</div>
+                            <div class="diagram-box-sub">8. <span class="font-bold">Agent Factory</span> uses Vision to analyze & fix</div>
+                            
+                            <div class="relative h-20 flex items-center justify-center">
+                                <div class="text-[#A149FF] font-semibold">...loop repeats...</div>
+                                <div class="absolute left-0 top-0 h-full w-0.5 bg-[#A149FF] translate-x-4"></div>
+                                <div class="absolute left-0 bottom-0 w-12 h-0.5 bg-[#A149FF] translate-x-4"></div>
+                                <div class="absolute right-0 top-0 h-full w-0.5 bg-[#A149FF] -translate-x-4"></div>
+                                <div class="absolute right-0 top-0 w-12 h-0.5 bg-[#A149FF] -translate-x-4"></div>
+                            </div>
+                        </div>
+
+                        <div class="flow-arrow" role="img" aria-label="down arrow">↓</div>
+                        <div class="diagram-box-sub">9. <span class="font-bold">User Approves</span> & Exports (GitHub)</div>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-lg shadow-xl p-6 md:p-8">
+                    <h3 class="text-2xl font-bold text-gray-900 mb-6 text-center">App Build Time (Conceptual)</h3>
+                    <p class="text-gray-600 text-center mb-6">
+                        This chart shows how an agent's time might be allocated during a complex "Order." The bulk of the time is spent on execution and debugging, which includes running code, testing, and fixing errors.
+                    </p>
+                    <div class="chart-container">
+                        <canvas id="orderTimeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <footer class="text-center my-12 md:my-16">
+            <h2 class="text-4xl font-black text-gray-900">
+                Core Vibe HQ
+            </h2>
+            <p class="text-xl text-gray-600 mt-3">
+                Autonomous Development Infrastructure
+            </p>
+        </footer>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const primaryColor = '#0044FF';
+            const secondaryColor = '#33D1FF';
+            const tertiaryColor = '#A149FF';
+            const warningColor = '#FF6B00';
+            const textColor = '#111827';
+            const subTextColor = '#6b7280';
+            const gridColor = '#e5e7eb';
+
+            const tooltipTitleCallback = (tooltipItems) => {
+                const item = tooltipItems[0];
+                let label = item.chart.data.labels[item.dataIndex];
+                if (Array.isArray(label)) {
+                    return label.join(' ');
+                } else {
+                    return label;
+                }
+            };
+            
+            const sharedOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: textColor
+                        },
+                        position: 'bottom'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: tooltipTitleCallback
+                        },
+                        titleColor: textColor,
+                        bodyColor: textColor,
+                        backgroundColor: '#ffffff',
+                        borderColor: gridColor,
+                        borderWidth: 1
+                    }
+                }
+            };
+
+            const agentToolkitCtx = document.getElementById('agentToolkitChart')?.getContext('2d');
+            if (agentToolkitCtx) {
+                new Chart(agentToolkitCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['File System IO', 'Code Execution', 'Web Research', ['Vision', '(Debugging)'], 'Deployment', 'Git Operations'],
+                        datasets: [{
+                            label: 'Agent Capability Score',
+                            data: [10, 9, 8, 9, 8, 7],
+                            backgroundColor: [
+                                primaryColor,
+                                secondaryColor,
+                                tertiaryColor,
+                                warningColor,
+                                primaryColor,
+                                secondaryColor
+                            ],
+                            borderColor: '#ffffff',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        ...sharedOptions,
+                        indexAxis: 'y',
+                        plugins: {
+                            ...sharedOptions.plugins,
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: { color: gridColor },
+                                ticks: { color: textColor }
+                            },
+                            y: {
+                                grid: { display: false },
+                                ticks: { color: textColor }
+                            }
+                        }
+                    }
+                });
+            }
+
+            const orderTimeCtx = document.getElementById('orderTimeChart')?.getContext('2d');
+            if (orderTimeCtx) {
+                new Chart(orderTimeCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Full-Stack App Build'],
+                        datasets: [
+                            {
+                                label: 'Planning (Blueprint)',
+                                data: [15],
+                                backgroundColor: tertiaryColor
+                            },
+                            {
+                                label: 'Code Generation',
+                                data: [40],
+                                backgroundColor: primaryColor
+                            },
+                            {
+                                label: 'Execution & Debugging',
+                                data: [30],
+                                backgroundColor: warningColor
+                            },
+                            {
+                                label: 'Deployment & Iteration',
+                                data: [15],
+                                backgroundColor: secondaryColor
+                            }
+                        ]
+                    },
+                    options: {
+                        ...sharedOptions,
+                        indexAxis: 'y',
+                        scales: {
+                            x: {
+                                stacked: true,
+                                grid: { color: gridColor },
+                                ticks: { color: textColor, callback: (value) => value + '%' }
+                            },
+                            y: {
+                                stacked: true,
+                                grid: { display: false },
+                                ticks: { color: textColor }
+                            }
+                        },
+                        plugins: {
+                            ...sharedOptions.plugins,
+                            tooltip: {
+                                ...sharedOptions.plugins.tooltip,
+                                callbacks: {
+                                    ...sharedOptions.plugins.tooltip.callbacks,
+                                    label: (context) => {
+                                        let label = context.dataset.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        label += context.raw + '%';
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

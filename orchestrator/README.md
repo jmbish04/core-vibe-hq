@@ -6,9 +6,6 @@ The orchestrator has been elevated to the top-level of the repository and now se
 
 ```
 orchestrator/
-├── ops-specialist/           # New Ops automation module
-│   ├── index.ts             # Conflict resolution, delivery reports, final QA
-│   └── wrangler.queue.ts    # Queue worker for async ops handling
 ├── worker/
 │   ├── api/routes/
 │   │   ├── opsRoutes.ts     # New ops specialist API endpoints
@@ -28,7 +25,7 @@ orchestrator/
 
 ## Ops Specialist Module
 
-The new `ops-specialist/` module provides automated operational capabilities:
+The `ops-specialist` module is located in `apps/ops-specialists/ops-specialist/` and provides automated operational capabilities:
 
 ### Features
 - **Conflict Resolution**: Automatically detects and resolves merge conflicts via GitHub API
@@ -42,7 +39,7 @@ The new `ops-specialist/` module provides automated operational capabilities:
 
 ### Usage
 ```typescript
-import { OpsSpecialist } from './ops-specialist'
+import { OpsSpecialist } from '../../apps/ops-specialists/ops-specialist'
 
 // Resolve conflicts
 await OpsSpecialist.resolveConflict(env, 'owner/repo', 'feature-branch', ['file1.ts', 'file2.ts'])
@@ -60,7 +57,6 @@ const qaResult = await OpsSpecialist.finalQA(env, 'order-123')
 2. **Updated imports** to reflect new structure (e.g., `../../../packages/shared-types/`)
 3. **Fixed wrangler config** - now deploys as `orchestrator` worker
 4. **Updated GitHub Actions** - workflow now uses `orchestrator/` working directory
-5. **Added ops-specialist module** with conflict resolution and delivery reporting
 6. **Added API routes** for ops specialist functionality
 
 ## Deployment

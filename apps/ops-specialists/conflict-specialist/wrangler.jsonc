@@ -1,0 +1,27 @@
+/**
+ * Conflict Specialist Worker Configuration
+ * 
+ * Extends the shared base configuration. All database operations
+ * go through orchestrator service bindings.
+ */
+{
+  "$ref": "../../../@shared/base/wrangler.base.jsonc",
+  
+  "name": "ops-conflict-specialist",
+  "main": "worker/index.ts",
+  
+  // Development settings with unique port
+  "dev": {
+    "port": 8792,
+    "local_protocol": "http"
+  },
+  
+  // Specialist-specific environment variables
+  "vars": {
+    "SPECIALIST_TYPE": "conflict-resolution",
+    "MAX_CONCURRENT_RESOLUTIONS": "3",
+    "DEFAULT_MODEL": "@cf/openai/gpt-oss-120b",
+    "WORKER_NAME": "Conflict Specialist",
+    "DIAGNOSTICS_ENABLED": "true"
+  }
+}

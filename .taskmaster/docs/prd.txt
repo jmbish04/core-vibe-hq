@@ -1,0 +1,689 @@
+# Comprehensive Three-Plan Integration
+
+This plan integrates three major systems:
+
+1. **WebSocket Event Model & Patch System** - Real-time patch governance with WebSocket broadcasting
+2. **AI Provider Integration** - Multi-provider routing system (Jules, Codex, Gemini, Claude, etc.)
+3. **Multi-Pass Refinement System** - Surgical patch manager and specialist agent architecture
+
+## Current State Analysis
+
+### What Already Exists
+
+- ✅ Database schema with `operation_logs`, health checks, ops tables
+- ✅ Entrypoints: `delivery`, `factory`, `github`, `health`, `logging`, `specialist`, `tasks`
+- ✅ WebSocket support in `BaseAgent` (apps/ workers)
+- ✅ Service bindings configured in `@shared/base/wrangler.base.jsonc`
+- ✅ Documentation structure in `docs/`
+- ✅ `@shared/` directory with base classes and types
+
+### What Needs to Be Created
+
+- ❌ `@shared/contracts/` - Shared Zod schemas for patches and WebSocket messages
+- ❌ Patch services (patchRunner, coordResolver, patchBridge, d1Logger)
+- ❌ Orchestrator WebSocket hub (factories have WebSocket, orchestrator needs central hub)
+- ❌ PatchOps entrypoint
+- ❌ Database tables: `patch_events`, `delivery_reports`, `ai_provider_*` tables
+- ❌ `patch_manager.py` and `patchctl` scripts
+- ❌ AI provider routing system
+- ❌ Ops monitoring service
+- ❌ Specialist agent base architecture
+
+---
+
+## Phase 1: Foundation & Shared Infrastructure (Parallel-Friendly)
+
+**Tags**: `[FOUNDATION]`, `[SHARED]`, `[DB-SCHEMA]`
+
+This phase establishes the foundation that all three plans depend on. Can be worked on in parallel.
+
+### 1.1 Shared Contracts Module [`FOUNDATION-1.1`]
+
+**Location**: Create `@shared/contracts/` at repo root
+
+**Files to Create:**
+
+- `@shared/contracts/contracts.ts` - All Zod schemas:
+- `PatchOperationSchema` (discriminated union: replace-block, insert-before, insert-after, append, prepend)
+- `PatchBatchSchema`
+- `PatchEventSchema`
+- `WebSocketMessageResponses` and `WebSocketMessageRequests` constants
+- All existing factory schemas (`TemplateSelectionSchema`, `FileOutputSchema`, `PhaseConceptSchema`, etc.)
+- `@shared/contracts/patchEvents.ts` - Patch event constants (`PATCH_REQUESTED`, `PATCH_APPLIED`, etc.)
+- `@shared/contracts/messages.ts` - WebSocket message type definitions
+
+**Dependencies**: None (pure TypeScript/Zod)
+
+**Integration**: All factories and orchestrator will import from here
+
+---
+
+### 1.2 Database Schema Extensions [`FOUNDATION-1.2`]
+
+**Location**: `orchestrator/worker/database/schema.ts`
+
+**Add Kysely Table Definitions:**
+
+- `patchEvents` table interface
+- `deliveryReports` table interface (if not already present)
+- `aiProviderAssignments` table interface
+- `aiProviderExecutions` table interface
+- `aiProviderConfigs` table interface
+- Ops monitoring tables (`workerLogs`, `buildLogs`, `opsIssues`, `opsScans`)
+
+**Migrations to Create:**
+
+- `orchestrator/migrations/005_patch_events.sql`
+- `orchestrator/migrations/006_delivery_reports.sql` (if needed)
+- `orchestrator/migrations/007_ai_provider_tables.sql`
+- `orchestrator/migrations/025_ops_monitoring.sql`
+
+**Dependencies**: None (pure schema definitions)
+
+---
+
+### 1.3 Patch Manager Python Script [`FOUNDATION-1.3`]
+
+**Location**: Repository root (or `factory/shared/scripts/`)
+
+**Files to Create:**
+
+- `patch_manager.py` - Core Python script for deterministic code mutations
+- Line-based surgical edits (replace-block, insert-before, insert-after, append, prepend)
+- Blank space padding for safe sequential edits
+- Task validation via `.mission_control/tasks.json`
+- Unified diff generation and logging
+- Orchestrator webhook callbacks (`POST /api/patches/events`)
+- TypeScript type checking integration
+- Dry-run mode
+- `patchctl` - Bash wrapper script (executable)
+
+**Dependencies**: None (standalone Python script)
+
+**Integration**: Will be called by orchestrator and agents via shell commands
+
+---
+
+### 1.4 Factory Base Dockerfile [`FOUNDATION-1.4`]
+
+**Location**: `factory/shared/factory-base.Dockerfile`
+
+**Contents:**
+
+- Node.js 22 base with Python 3
+- Pre-installed CLI tools:
+- `codex-cli`, `@google/gemini-cli`, `@anthropic/claude-cli`
+- `cursor-agent-cli`, `github-copilot-cli`
+- Shared scripts in `/usr/local/bin/`
+- Patch Manager Python script included
+- `patchctl` in PATH
+
+**Dependencies**: Requires `patch_manager.py` from 1.3
+
+**Integration**: Used by all factory workers for AI provider execution
+
+---
+
+## Phase 2: Patch System Core (Plan 1 - Part 1)
+
+**Tags**: `[PATCH-SYSTEM]`, `[WEBSOCKET]`
+
+Foundation for WebSocket event model and patch governance.
+
+### 2.1 Patch Services [`PATCH-2.1`]
+
+**Location**: `orchestrator/worker/services/patch/`
+
+**Files to Create:**
+
+- `patchRunner.ts` - Execute patchctl commands safely
+- Note: Workers can't execute shell directly - may need HTTP API or service binding adaptation
+- Stream patch results
+- Return `PatchEvent[]` array
+- `coordResolver.ts` - Find placeholder markers in files
+- `resolveCoordsByMarker(filePath, markerRegex)`
+- Return `{ mode: "new" }` or `{ mode: "existing", span: {...} }` or `{ mode: "existing", insertBeforeLine: number }`
+- `patchBridge.ts` - Convert factory outputs to patch batches
+- `filesToPatches(phase, coordResolver)` - Convert `PhaseImplementationSchemaType` to `PatchBatch`
+- `d1Logger.ts` - Log patch events to D1
+- `logPatchEvent(env: Env, evt: PatchEvent)`
+
+**Dependencies**: `[FOUNDATION-1.1]`, `[FOUNDATION-1.2]`
+
+---
+
+### 2.2 WebSocket Hub [`PATCH-2.2`]
+
+**Location**: `orchestrator/worker/services/websocket/websocketHub.ts`
+
+**Functionality:**
+
+- `registerConnection(ws: WebSocket)` - Track connected clients
+- `broadcast(event: PatchBroadcast)` - Send patch events to all connected clients
+- Handle connection cleanup on close
+- Works with Cloudflare's `WebSocketPair`
+- Stores connections in memory (`Set<WebSocket>`)
+
+**Dependencies**: `[FOUNDATION-1.1]` (needs PatchEvent types)
+
+**Integration**: Used by PatchOps entrypoint for broadcasting
+
+---
+
+### 2.3 PatchOps Entrypoint [`PATCH-2.3`]
+
+**Location**: `orchestrator/worker/entrypoints/patch.ts`
+
+**Functionality:**
+
+- RPC entrypoint class `PatchOps extends BaseWorkerEntrypoint`
+- Method: `applyPatches(batch: unknown)` - Validates PatchBatch, runs patchRunner, logs to D1, broadcasts via WebSocket
+- HTTP route: `POST /api/patches/apply` - Same functionality via REST
+- Uses `patchRunner.ts` for execution
+- Uses `d1Logger.ts` for logging
+- Uses `websocketHub.ts` for broadcasting
+- Validates with Zod schemas from `@shared/contracts`
+
+**Dependencies**: `[PATCH-2.1]`, `[PATCH-2.2]`, `[FOUNDATION-1.1]`, `[FOUNDATION-1.2]`
+
+**Service Binding**: Add `ORCHESTRATOR_PATCH` to `@shared/base/wrangler.base.jsonc`
+
+---
+
+### 2.4 WebSocket Routes [`PATCH-2.4`]
+
+**Location**: `orchestrator/worker/api/routes/websocket.ts`
+
+**Functionality:**
+
+- `GET /ws` - WebSocket upgrade endpoint
+- Accept WebSocket connections
+- Register with websocketHub
+- Send connection confirmation
+
+**Dependencies**: `[PATCH-2.2]`
+
+**Integration**: Register route in `orchestrator/worker/api/routes/index.ts`
+
+---
+
+## Phase 3: Patch Analytics & Delivery (Plan 1 - Part 2)
+
+**Tags**: `[PATCH-SYSTEM]`, `[ANALYTICS]`, `[DELIVERY]`
+
+### 3.1 Patch Logs API [`PATCH-3.1`]
+
+**Location**: `orchestrator/worker/api/routes/patchLogs.ts`
+
+**Functionality:**
+
+- `GET /api/patches/logs` - Query `patch_events` table
+- Supports filtering: `task_id`, `file`, `search`, `limit`, `offset`, `order`
+- Returns paginated results
+- Uses Kysely for type-safe queries
+
+**Dependencies**: `[FOUNDATION-1.2]` (patch_events table)
+
+---
+
+### 3.2 Patch Stats API [`PATCH-3.2`]
+
+**Location**: `orchestrator/worker/api/routes/patchStats.ts`
+
+**Functionality:**
+
+- `GET /api/patches/stats` - Aggregated metrics
+- Daily counts, success rate by factory, operation distribution, error summary
+- Supports date range filtering (`from`, `to`)
+- Uses Kysely for queries
+
+**Dependencies**: `[FOUNDATION-1.2]`
+
+---
+
+### 3.3 Patch Trends API [`PATCH-3.3`]
+
+**Location**: `orchestrator/worker/api/routes/patchTrends.ts`
+
+**Functionality:**
+
+- `GET /api/patches/trends` - Trend analysis
+- Grouping modes: `weekly`, `phase`, `order`
+- Computes success rates, timelines, patch counts
+- Uses Kysely with proper type safety
+
+**Dependencies**: `[FOUNDATION-1.2]`
+
+---
+
+### 3.4 Delivery Reports Service [`PATCH-3.4`]
+
+**Location**: `orchestrator/worker/services/delivery/deliveryReportsService.ts`
+
+**Functionality:**
+
+- `generateReports()` - Aggregate patch trends by order_id, generate Markdown reports
+- `getLatestReports(limit)` - Fetch recent reports
+- `getReport(orderId)` - Get report for specific order
+- Uses Kysely for database queries
+- Generates both Markdown (`report_md`) and JSON (`report_json`)
+
+**Dependencies**: `[FOUNDATION-1.2]`, `[PATCH-3.1]`, `[PATCH-3.2]`, `[PATCH-3.3]`
+
+**Integration**: Update existing `Delivery` entrypoint or create `DeliveryReports` entrypoint
+
+---
+
+### 3.5 Delivery Reports API Route [`PATCH-3.5`]
+
+**Location**: `orchestrator/worker/api/routes/deliveryReports.ts`
+
+**Functionality:**
+
+- `GET /api/delivery/reports` - List reports
+- `GET /api/delivery/reports?order_id=X` - Get specific report
+- `GET /api/delivery/reports?generate=true` - Trigger report generation
+
+**Dependencies**: `[PATCH-3.4]`
+
+---
+
+## Phase 4: Ops Monitoring & GitHub Integration (Plan 1 - Part 3)
+
+**Tags**: `[OPS-MONITORING]`, `[GITHUB]`
+
+### 4.1 GitHub Integrations Module [`OPS-4.1`]
+
+**Location**: `orchestrator/worker/integrations/module.ts`
+
+**Functionality:**
+
+- `IntegrationsModule` class with methods:
+- `listRepoIssues(repo)`
+- `listRepoPRs(repo)`
+- `createIssue(title, body, repo)`
+- `commentOnIssue(number, body, repo)`
+- `updateIssueState(number, state, repo)`
+- Uses `CORE_GITHUB_API` service binding
+- Uses `env.GITHUB_REPO` for default repo
+
+**Dependencies**: Existing GitHub client (`orchestrator/worker/clients/githubClient.ts`)
+
+---
+
+### 4.2 Ops Monitor Service [`OPS-4.2`]
+
+**Location**: `orchestrator/worker/services/ops/OpsMonitorService.ts`
+
+**Functionality:**
+
+- `ingestLogs(scope)` - Fetch logs from `CORE_CLOUDFLARE_API` and `CORE_GITHUB_API`, persist to D1
+- `analyzeAndFile(scope)` - Analyze logs with LLM, create GitHub issues, persist to `ops_issues`
+- `analyzeWithLLM(inputs)` - Stub for LLM analysis (can be enhanced later)
+- `openGitHubIssue(title, body)` - Create GitHub issues via `IntegrationsModule`
+
+**Dependencies**: `[OPS-4.1]`, `[FOUNDATION-1.2]` (ops monitoring tables)
+
+---
+
+### 4.3 Ops Routes [`OPS-4.3`]
+
+**Location**: `orchestrator/worker/api/routes/ops.ts`
+
+**Functionality:**
+
+- `POST /api/ops/scan` - Trigger scan (ingestLogs + analyzeAndFile)
+- `GET /api/ops/issues` - List ops issues
+- `POST /api/ops/issues/:id/claim` - Claim an issue (mark in_progress, comment on GitHub)
+- `GET /api/ops/summary` - Aggregate counts by status/severity
+
+**Dependencies**: `[OPS-4.2]`
+
+---
+
+### 4.4 Ops Scan Entrypoint [`OPS-4.4`]
+
+**Location**: `orchestrator/worker/entrypoints/opsScan.ts`
+
+**Functionality:**
+
+- RPC method: `scan(scope)` - Trigger ops monitoring scan
+- Uses `OpsMonitorService`
+
+**Dependencies**: `[OPS-4.2]`
+
+**Service Binding**: Add `ORCHESTRATOR_OPS` to `@shared/base/wrangler.base.jsonc` (or update existing `ORCHESTRATOR_OPS`)
+
+---
+
+### 4.5 Scheduled Cron Handler [`OPS-4.5`]
+
+**Location**: `orchestrator/worker/index.ts`
+
+**Functionality:**
+
+- Export `scheduled` handler for nightly cron job
+- Runs `OpsMonitorService.ingestLogs("full")` and `analyzeAndFile("full")`
+
+**Dependencies**: `[OPS-4.2]`
+
+**Wrangler Config**: Add `triggers.crons: ["0 09 * * *"]` to `orchestrator/wrangler.jsonc`
+
+---
+
+## Phase 5: AI Provider Integration (Plan 2)
+
+**Tags**: `[AI-PROVIDER]`, `[ROUTING]`
+
+### 5.1 AI Provider Registry [`AI-5.1`]
+
+**Location**: `orchestrator/worker/services/ai-providers/registry.ts`
+
+**Functionality:**
+
+- Provider definitions with capabilities, cost, availability
+- Health checks and status tracking
+- Fallback chains for provider failures
+- Supported providers: Jules, Codex, Gemini, Claude, Cursor, GitHub Copilot
+
+**Dependencies**: `[FOUNDATION-1.2]` (ai_provider_configs table)
+
+---
+
+### 5.2 AI Provider Router [`AI-5.2`]
+
+**Location**: `orchestrator/worker/services/ai-providers/router.ts`
+
+**Functionality:**
+
+- Automatic provider selection based on:
+- `task.type` (generate, fix, refactor, optimize)
+- `sourceContext` (GitHub branch vs local factory)
+- `priority` and `cost_profile`
+- `preferredModel` tag from project settings
+- Provider-specific rules:
+- Jules: Only when `repo` + `branch` exists in GitHub
+- CLI agents: For incremental code generation/refactoring in factory containers
+- Manual override support per order
+
+**Dependencies**: `[AI-5.1]`
+
+---
+
+### 5.3 Secret Service [`AI-5.3`]
+
+**Location**: `orchestrator/worker/services/secrets/secretService.ts`
+
+**Functionality:**
+
+- Retrieves secrets from Cloudflare Workers secrets
+- Secrets: `JULES_API_KEY`, `CODEX_API_KEY`, `GEMINI_API_KEY`, `CLAUDE_API_KEY`, `CURSOR_API_KEY`, `GITHUB_TOKEN`
+- Injected as environment variables to containers at runtime
+- Never persisted in code or logs
+
+**Dependencies**: None (uses Cloudflare Workers secrets API)
+
+---
+
+### 5.4 Jules Integration [`AI-5.4`]
+
+**Location**: `orchestrator/worker/services/ai-providers/jules/`
+
+**Files to Create:**
+
+- `julesClient.ts` - API client for Jules task creation
+- Handles both scenarios:
+- Existing repositories: Direct operation against GitHub
+- New builds: Factory commits to `factory/<order-id>` branch first
+- Task payload structure with repo, branch, task_type, context, instructions
+- `julesHandler.ts` - Polls Jules API for task completion
+- Webhook receiver for Jules callbacks
+- Converts Jules output to structured patch format
+
+**Dependencies**: `[AI-5.3]`, `[FOUNDATION-1.1]` (patch schemas)
+
+**Integration**: Uses existing GitHub client for branch management
+
+---
+
+### 5.5 CLI Agent Service [`AI-5.5`]
+
+**Location**: `orchestrator/worker/services/ai-providers/cli/cliAgentService.ts`
+
+**Functionality:**
+
+- Manages CLI container execution
+- Queue consumer for CLI tasks
+- Environment variable injection (API keys, GitHub token)
+- Structured output parsing
+- Executes CLI agents in containers using `factory-base.Dockerfile`
+
+**Dependencies**: `[AI-5.3]`, `[FOUNDATION-1.4]`, `[FOUNDATION-1.3]` (patchctl)
+
+---
+
+### 5.6 Patch Processor Service [`AI-5.6`]
+
+**Location**: `orchestrator/worker/services/patch-manager/patchProcessor.ts`
+
+**Functionality:**
+
+- Validates and processes AI-generated patches
+- Calls Patch Manager Python script via RPC or local execution
+- Logs to `operation_logs` with patch metadata
+- Triggers validation phase on success
+- Creates remediation tasks on failure
+
+**Dependencies**: `[FOUNDATION-1.3]`, `[FOUNDATION-1.1]` (patch schemas)
+
+---
+
+### 5.7 AIProviderOps Entrypoint [`AI-5.7`]
+
+**Location**: `orchestrator/worker/entrypoints/AIProviderOps.ts`
+
+**Functionality:**
+
+- `assignProvider(taskId, preferredProvider?)` - Auto-assign or manually assign provider
+- `executeTask(taskId, provider?)` - Execute task with specified provider
+- `getProviderStatus(providerName)` - Health check and availability
+- `listAvailableProviders(taskId)` - Get suitable providers for a task
+
+**Dependencies**: `[AI-5.2]`, `[AI-5.4]`, `[AI-5.5]`, `[AI-5.6]`
+
+**Service Binding**: Add `ORCHESTRATOR_AI_PROVIDER` to `@shared/base/wrangler.base.jsonc`
+
+---
+
+## Phase 6: Multi-Pass Refinement System (Plan 3)
+
+**Tags**: `[MULTI-PASS]`, `[SPECIALIST]`, `[DOCS]`
+
+### 6.1 Orchestrator Patch Events Endpoint [`MULTI-6.1`]
+
+**Location**: `orchestrator/worker/api/routes/patchEvents.ts`
+
+**Functionality:**
+
+- `POST /api/patches/events` - Receives patch events from `patch_manager.py`
+- Validates `PatchEventSchema`
+- Logs to D1 via `d1Logger`
+- Broadcasts via WebSocket hub
+- Updates task status
+
+**Dependencies**: `[PATCH-2.1]` (d1Logger), `[PATCH-2.2]` (websocketHub), `[FOUNDATION-1.1]`
+
+**Integration**: This is the callback endpoint that `patch_manager.py` calls
+
+---
+
+### 6.2 Specialist Agent Base Architecture [`MULTI-6.2`]
+
+**Location**: `orchestrator/worker/agents/specialists/` or `apps/ops-specialists/`
+
+**Files to Create:**
+
+- Base specialist agent class/interfaces
+- Specialist queue/worker structure
+- Orchestrator endpoints for specialist coordination
+- Specialist dispatch service
+
+**Dependencies**: `[FOUNDATION-1.3]` (patchctl), `[MULTI-6.1]`
+
+**Integration**: Uses existing `BaseAgent` from `@shared/base/agents/BaseAgent.ts`
+
+---
+
+### 6.3 Documentation Creation [`MULTI-6.3`]
+
+**Location**: `docs/development/`
+
+**Files to Create:**
+
+- `patch-manager.md` - Comprehensive Patch Manager guide
+- `multi-pass-refinement.md` - Specialist agent system overview
+- `specialist-agents.md` - Detailed specialist agent specifications
+
+**Documentation Updates:**
+
+- Update `docs/OVERVIEW.md` with new documentation entries
+
+**Dependencies**: None (can be done in parallel)
+
+---
+
+## Phase 7: Integration & Factory Updates
+
+**Tags**: `[INTEGRATION]`, `[FACTORY-UPDATE]`
+
+### 7.1 Update Factories to Use Shared Contracts [`INTEGRATION-7.1`]
+
+**Location**: All factory workers (`apps/agent-factory`, `apps/ui-factory`, etc.)
+
+**Changes:**
+
+- Import patch schemas from `@shared/contracts` instead of local definitions
+- Remove duplicate event type definitions
+- Use `PatchBatch` type when sending patch requests
+
+**Dependencies**: `[FOUNDATION-1.1]`
+
+---
+
+### 7.2 Update Factory-to-Orchestrator Calls [`INTEGRATION-7.2`]
+
+**Location**: Factory workers
+
+**Changes:**
+
+- Replace direct file writes with `PatchBatch` requests to orchestrator
+- Use `ORCHESTRATOR_PATCH` service binding (if RPC) or HTTP `/api/patches/apply`
+- Handle patch event responses
+
+**Dependencies**: `[PATCH-2.3]`, `[INTEGRATION-7.1]`
+
+---
+
+### 7.3 Update Service Bindings [`INTEGRATION-7.3`]
+
+**Location**: `@shared/base/wrangler.base.jsonc`
+
+**Add Bindings:**
+
+- `ORCHESTRATOR_PATCH` - Service binding to `PatchOps` entrypoint
+- `ORCHESTRATOR_AI_PROVIDER` - Service binding to `AIProviderOps` entrypoint
+- Update `ORCHESTRATOR_DELIVERY` if needed
+- Update `ORCHESTRATOR_OPS` if needed
+
+**Dependencies**: `[PATCH-2.3]`, `[AI-5.7]`
+
+---
+
+### 7.4 Update Route Registration [`INTEGRATION-7.4`]
+
+**Location**: `orchestrator/worker/api/routes/index.ts`
+
+**Changes:**
+
+- Register new routes: `websocket`, `patchLogs`, `patchStats`, `patchTrends`, `deliveryReports`, `ops`, `patchEvents`
+- Ensure all routes are properly wired
+
+**Dependencies**: All route creation tasks
+
+---
+
+## Phase 8: Testing & Validation
+
+**Tags**: `[TESTING]`, `[VALIDATION]`
+
+### 8.1 Database Migrations [`TESTING-8.1`]
+
+- Run all migrations: `npm run db:migrate:local` then `npm run db:migrate:remote`
+- Verify all tables created correctly
+- Check indexes and constraints
+
+**Dependencies**: `[FOUNDATION-1.2]`
+
+---
+
+### 8.2 Type Checking [`TESTING-8.2`]
+
+- Run `npm run typecheck:all` - Ensure no TypeScript errors
+- Fix any type mismatches
+- Verify all imports resolve correctly
+
+**Dependencies**: All implementation phases
+
+---
+
+### 8.3 Linting [`TESTING-8.3`]
+
+- Run `npm run lint:all` - Ensure no linting errors
+- Fix code style violations
+
+**Dependencies**: All implementation phases
+
+---
+
+### 8.4 Integration Testing [`TESTING-8.4`]
+
+- Test patch application flow end-to-end
+- Test WebSocket broadcasting
+- Test delivery report generation
+- Test ops monitoring scan
+- Test AI provider routing and execution
+- Test patch manager Python script
+
+**Dependencies**: All implementation phases
+
+---
+
+## Critical Dependencies
+
+1. **Foundation Phase (1.1-1.4) must complete before any other phase**
+2. **Patch System Phase 2 (2.1-2.4) must complete before Multi-Pass Phase 6.1**
+3. **All implementation phases must complete before Integration Phase 7**
+4. **All phases must complete before Testing Phase 8**
+
+## Implementation Notes
+
+### Critical Considerations
+
+1. **Patch Execution**: Cloudflare Workers cannot execute shell commands directly. The `patchRunner.ts` service needs to either:
+   - Use a service binding to a worker that can execute patchctl
+   - Use an HTTP API endpoint that executes patchctl
+   - Use a Durable Object for patch execution
+   - Or patch_manager.py needs to POST events directly to orchestrator (preferred)
+
+2. **Database Access**: Only orchestrator has direct D1 access. All patch logging must go through orchestrator.
+
+3. **WebSocket Connections**: Cloudflare Workers support WebSocket via `WebSocketPair`. The hub should manage connections in memory.
+
+4. **Service Bindings**: All factories must use service bindings to communicate with orchestrator, not direct HTTP calls (unless needed for external access).
+
+5. **Type Safety**: All schemas use Zod for validation. All database operations use Kysely for type safety.
+
+6. **Container Execution**: AI provider CLI agents execute in containers. The orchestrator manages container lifecycle and secret injection.
+
+
+

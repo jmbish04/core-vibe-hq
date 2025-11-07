@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - 'apps/orchestrator/**'
+      - 'orchestrator/**'
   workflow_dispatch:
 
 jobs:
@@ -21,7 +21,7 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        working-directory: apps/orchestrator
+        working-directory: orchestrator
         run: npm ci
 
       - name: Build & Deploy Worker
@@ -29,5 +29,5 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: apps/orchestrator
+          workingDirectory: orchestrator
 

@@ -1,0 +1,30 @@
+{
+  "models": {},
+  "global": {
+    "logLevel": "info",
+    "debug": true,
+    "defaultNumTasks": 10,
+    "defaultSubtasks": 5,
+    "defaultPriority": "medium",
+    "projectName": "Vibecode HQ",
+    "responseLanguage": "English",
+    "enableCodebaseAnalysis": true,
+    "defaultTag": "master",
+    "userId": "1234567890"
+  },
+  "claudeCode": {},
+  "codexCli": {
+    "provider": "openai",
+    "model": "gpt-5-codex",
+    "allowNpx": true,
+    "skipGitRepoCheck": true,
+    "approvalMode": "full-auto",
+    "sandboxMode": "workspace-write",
+    "verbose": true
+  },
+  "grokCli": {
+    "timeout": 120000,
+    "workingDirectory": null,
+    "defaultModel": "grok-4-latest"
+  }
+}

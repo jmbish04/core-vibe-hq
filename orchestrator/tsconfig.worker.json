@@ -1,10 +1,29 @@
 {
-	"extends": "./tsconfig.node.json",
 	"compilerOptions": {
+		"target": "ES2022",
+		"lib": ["ES2022"],
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"allowSyntheticDefaultImports": true,
+		"esModuleInterop": true,
+		"allowJs": true,
+		"strict": true,
+		"noEmit": true,
+		"isolatedModules": true,
+		"skipLibCheck": true,
+		"forceConsistentCasingInFileNames": true,
+		"resolveJsonModule": true,
 		"composite": true,
 		"tsBuildInfoFile": "./node_modules/.tmp/tsconfig.worker.tsbuildinfo",
-		"types": ["@cloudflare/workers-types", "./worker-configuration.d.ts", "vite/client", "jest"],
-		"lib": ["ES2023"]
+		"types": ["@cloudflare/workers-types"],
+		"baseUrl": ".",
+		"paths": {
+			"@shared/*": ["../@shared/*"]
+		}
 	},
-	"include": ["./worker-configuration.d.ts", "./shared", "./worker", "./worker/types"]
+	"include": [
+		"./worker-configuration.d.ts", 
+		"./worker/**/*",
+		"../@shared/**/*"
+	]
 }

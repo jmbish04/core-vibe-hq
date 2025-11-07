@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{WORKER_NAME}} - Diagnostics</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-healthy { background: #10b981; }
+        .status-warning { background: #f59e0b; }
+        .status-error { background: #ef4444; }
+        
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .metric:last-child {
+            border-bottom: none;
+        }
+        
+        .metric-value {
+            font-weight: 600;
+            color: #1f2937;
+        }
+        
+        .logs-container {
+            height: 300px;
+            overflow-y: auto;
+            background: #1f2937;
+            color: #f9fafb;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        
+        .log-entry {
+            margin-bottom: 4px;
+            padding: 2px 0;
+        }
+        
+        .log-timestamp {
+            color: #9ca3af;
+            margin-right: 8px;
+        }
+        
+        .log-level-info { color: #60a5fa; }
+        .log-level-warn { color: #fbbf24; }
+        .log-level-error { color: #f87171; }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        button {
+            background: #4f46e5;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+        
+        button:hover {
+            background: #4338ca;
+        }
+        
+        button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+        
+        .websocket-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+        
+        .command-input {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .command-history {
+            max-height: 150px;
+            overflow-y: auto;
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 10px;
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>{{WORKER_NAME}} Diagnostics</h1>
+            <div class="websocket-status">
+                <span class="status-indicator" id="ws-status"></span>
+                <span id="ws-text">Connecting...</span>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button onclick="refreshMetrics()">Refresh Metrics</button>
+            <button onclick="clearLogs()">Clear Logs</button>
+            <button onclick="runHealthCheck()">Health Check</button>
+            <button onclick="toggleWebSocket()" id="ws-toggle">Connect WebSocket</button>
+        </div>
+        
+        <div class="status-grid">
+            <div class="card">
+                <h3>System Status</h3>
+                <div class="metric">
+                    <span>Worker Status</span>
+                    <span class="metric-value">
+                        <span class="status-indicator status-healthy"></span>
+                        <span id="worker-status">Healthy</span>
+                    </span>
+                </div>
+                <div class="metric">
+                    <span>Uptime</span>
+                    <span class="metric-value" id="uptime">--</span>
+                </div>
+                <div class="metric">
+                    <span>Memory Usage</span>
+                    <span class="metric-value" id="memory">--</span>
+                </div>
+                <div class="metric">
+                    <span>CPU Usage</span>
+                    <span class="metric-value" id="cpu">--</span>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>Configuration</h3>
+                <div class="metric">
+                    <span>Factory Type</span>
+                    <span class="metric-value">{{FACTORY_TYPE}}</span>
+                </div>
+                <div class="metric">
+                    <span>Default Model</span>
+                    <span class="metric-value">{{DEFAULT_MODEL}}</span>
+                </div>
+                <div class="metric">
+                    <span>Environment</span>
+                    <span class="metric-value">{{ENVIRONMENT}}</span>
+                </div>
+                <div class="metric">
+                    <span>Version</span>
+                    <span class="metric-value" id="version">--</span>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>Operations</h3>
+                <div class="metric">
+                    <span>Active Operations</span>
+                    <span class="metric-value" id="active-ops">--</span>
+                </div>
+                <div class="metric">
+                    <span>Total Processed</span>
+                    <span class="metric-value" id="total-processed">--</span>
+                </div>
+                <div class="metric">
+                    <span>Success Rate</span>
+                    <span class="metric-value" id="success-rate">--</span>
+                </div>
+                <div class="metric">
+                    <span>Avg Response Time</span>
+                    <span class="metric-value" id="avg-response">--</span>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>Orchestrator Connection</h3>
+                <div class="metric">
+                    <span>Connection Status</span>
+                    <span class="metric-value">
+                        <span class="status-indicator status-healthy"></span>
+                        <span id="orchestrator-status">Connected</span>
+                    </span>
+                </div>
+                <div class="metric">
+                    <span>Last Ping</span>
+                    <span class="metric-value" id="last-ping">--</span>
+                </div>
+                <div class="metric">
+                    <span>RPC Calls</span>
+                    <span class="metric-value" id="rpc-calls">--</span>
+                </div>
+                <div class="metric">
+                    <span>RPC Errors</span>
+                    <span class="metric-value" id="rpc-errors">--</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h3>Real-time Logs</h3>
+            <div class="logs-container" id="logs">
+                <div class="log-entry">
+                    <span class="log-timestamp">[--:--:--]</span>
+                    <span class="log-level-info">[INFO]</span>
+                    Worker diagnostics initialized
+                </div>
+            </div>
+            
+            <div class="command-input">
+                <input type="text" id="command-input" placeholder="Enter diagnostic command (e.g., 'status', 'metrics', 'ping orchestrator')" />
+                <button onclick="executeCommand()">Execute</button>
+            </div>
+            
+            <div class="command-history" id="command-history" style="display: none;">
+                <!-- Command history will appear here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Load the shared WebSocket client -->
+    <script src="/@shared/client/workerWebSocketClient.min.js"></script>
+    
+    <script>
+        let wsClient = null;
+        let commandHistory = [];
+        
+        // Initialize diagnostics
+        document.addEventListener('DOMContentLoaded', function() {
+            refreshMetrics();
+            setInterval(refreshMetrics, 5000); // Refresh every 5 seconds
+        });
+        
+        // WebSocket connection using shared client
+        function toggleWebSocket() {
+            if (wsClient && wsClient.getStatus().connected) {
+                disconnectWebSocket();
+            } else {
+                connectWebSocket();
+            }
+        }
+        
+        async function connectWebSocket() {
+            try {
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = `${protocol}//${window.location.host}/ws`;
+                
+                wsClient = new WorkerWebSocketClient(wsUrl, {
+                    autoReconnect: true,
+                    reconnectInterval: 3000,
+                    maxReconnectAttempts: 5
+                });
+                
+                // Set up event handlers
+                wsClient.onConnect = () => {
+                    updateWebSocketStatus('Connected', 'status-healthy');
+                    document.getElementById('ws-toggle').textContent = 'Disconnect WebSocket';
+                    addLog('WebSocket connected via shared client', 'info');
+                };
+                
+                wsClient.onDisconnect = () => {
+                    updateWebSocketStatus('Disconnected', 'status-error');
+                    document.getElementById('ws-toggle').textContent = 'Connect WebSocket';
+                    addLog('WebSocket disconnected', 'warn');
+                };
+                
+                wsClient.onReconnecting = (attempt) => {
+                    updateWebSocketStatus(`Reconnecting (${attempt})`, 'status-warning');
+                    addLog(`Reconnection attempt ${attempt}`, 'info');
+                };
+                
+                wsClient.onError = (error) => {
+                    addLog(`WebSocket error: ${error}`, 'error');
+                };
+                
+                // Subscribe to events
+                wsClient.subscribeLogs((logMessage) => {
+                    addLog(logMessage.message, logMessage.level);
+                });
+                
+                wsClient.subscribeMetrics((metricsMessage) => {
+                    updateMetrics(metricsMessage.metrics);
+                });
+                
+                wsClient.subscribeEvents((event) => {
+                    addLog(`Event: ${JSON.stringify(event)}`, 'info');
+                });
+                
+                // Connect
+                await wsClient.connect();
+                
+            } catch (error) {
+                addLog(`Failed to connect WebSocket: ${error.message}`, 'error');
+                updateWebSocketStatus('Connection Failed', 'status-error');
+            }
+        }
+        
+        function disconnectWebSocket() {
+            if (wsClient) {
+                wsClient.disconnect();
+                wsClient = null;
+            }
+        }
+        
+        function updateWebSocketStatus(text, statusClass) {
+            document.getElementById('ws-text').textContent = text;
+            const indicator = document.getElementById('ws-status');
+            indicator.className = `status-indicator ${statusClass}`;
+        }
+        
+        // Metrics refresh
+        async function refreshMetrics() {
+            try {
+                const response = await fetch('/diagnostics/metrics');
+                const metrics = await response.json();
+                updateMetrics(metrics);
+            } catch (error) {
+                addLog(`Failed to fetch metrics: ${error.message}`, 'error');
+            }
+        }
+        
+        function updateMetrics(metrics) {
+            document.getElementById('uptime').textContent = metrics.uptime || '--';
+            document.getElementById('memory').textContent = metrics.memory || '--';
+            document.getElementById('cpu').textContent = metrics.cpu || '--';
+            document.getElementById('active-ops').textContent = metrics.activeOps || '--';
+            document.getElementById('total-processed').textContent = metrics.totalProcessed || '--';
+            document.getElementById('success-rate').textContent = metrics.successRate || '--';
+            document.getElementById('avg-response').textContent = metrics.avgResponse || '--';
+            document.getElementById('last-ping').textContent = metrics.lastPing || '--';
+            document.getElementById('rpc-calls').textContent = metrics.rpcCalls || '--';
+            document.getElementById('rpc-errors').textContent = metrics.rpcErrors || '--';
+            document.getElementById('version').textContent = metrics.version || '--';
+        }
+        
+        // Health check
+        async function runHealthCheck() {
+            try {
+                addLog('Running health check...', 'info');
+                const response = await fetch('/diagnostics/health');
+                const result = await response.json();
+                
+                if (result.healthy) {
+                    addLog('Health check passed ✓', 'info');
+                } else {
+                    addLog(`Health check failed: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                addLog(`Health check error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Command execution using shared client
+        async function executeCommand() {
+            const input = document.getElementById('command-input');
+            const command = input.value.trim();
+            
+            if (!command) return;
+            
+            commandHistory.push(command);
+            addLog(`> ${command}`, 'info');
+            
+            try {
+                if (wsClient && wsClient.getStatus().connected) {
+                    // Use WebSocket client
+                    const result = await wsClient.executeCommand(command);
+                    addLog(`Command result: ${result.output}`, 'info');
+                } else {
+                    // Fallback to HTTP
+                    await executeCommandHTTP(command);
+                }
+            } catch (error) {
+                addLog(`Command error: ${error.message}`, 'error');
+            }
+            
+            input.value = '';
+            updateCommandHistory();
+        }
+        
+        async function executeCommandHTTP(command) {
+            try {
+                const response = await fetch('/diagnostics/command', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command })
+                });
+                
+                const result = await response.json();
+                addLog(`Command result: ${result.output}`, 'info');
+            } catch (error) {
+                addLog(`Command error: ${error.message}`, 'error');
+            }
+        }
+        
+        function updateCommandHistory() {
+            const historyDiv = document.getElementById('command-history');
+            if (commandHistory.length > 0) {
+                historyDiv.style.display = 'block';
+                historyDiv.innerHTML = commandHistory.slice(-10).map(cmd => 
+                    `<div>> ${cmd}</div>`
+                ).join('');
+            }
+        }
+        
+        // Logging
+        function addLog(message, level = 'info') {
+            const logsContainer = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString();
+            
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            logEntry.innerHTML = `
+                <span class="log-timestamp">[${timestamp}]</span>
+                <span class="log-level-${level}">[${level.toUpperCase()}]</span>
+                ${message}
+            `;
+            
+            logsContainer.appendChild(logEntry);
+            logsContainer.scrollTop = logsContainer.scrollHeight;
+            
+            // Keep only last 100 log entries
+            while (logsContainer.children.length > 100) {
+                logsContainer.removeChild(logsContainer.firstChild);
+            }
+        }
+        
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = '';
+            addLog('Logs cleared', 'info');
+        }
+        
+        // Handle Enter key in command input
+        document.getElementById('command-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                executeCommand();
+            }
+        });
+    </script>
+</body>
+</html>

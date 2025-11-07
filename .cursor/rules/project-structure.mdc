@@ -1,0 +1,38 @@
+---
+description: "Core project structure and orchestrator location rules - CRITICAL"
+globs:
+  - "**/*.ts"
+  - "**/*.tsx"
+  - "**/*.json"
+  - "**/*.jsonc"
+alwaysApply: true
+---
+
+# Project Structure - CRITICAL RULES
+
+## Orchestrator Location - NEVER MOVE OR CREATE UNDER apps/
+
+⚠️ **CRITICAL**: The orchestrator is at the **root level**, NOT under `apps/`
+
+- ✅ **Correct**: `orchestrator/` (at repository root)
+- ❌ **WRONG**: `apps/orchestrator/` - This path does NOT exist and must NEVER be created
+- ❌ **WRONG**: Creating new orchestrator files under `apps/orchestrator/`
+
+**The orchestrator is a special worker that coordinates all other workers. It lives at the repository root, not under `apps/`.**
+
+## Apps Directory Structure
+
+- `apps/` contains independent Cloudflare Workers:
+  - `apps/agent-factory/` - Agent generation worker
+  - `apps/data-factory/` - Data operations worker
+  - `apps/services-factory/` - External service proxy worker
+  - `apps/ui-factory/` - UI/frontend worker
+  - `apps/ops-specialists/` - Specialized operational workers
+
+Each worker under `apps/` is deployed independently and has its own `wrangler.jsonc` configuration.
+
+## File Naming Conventions
+
+- Use **lowercase** for file names: `guardrail.ts` not `Guardrail.ts`
+- Use **PascalCase** for class names: `GuardRailsOperation`
+- Use **kebab-case** for directories: `project-clarification/`

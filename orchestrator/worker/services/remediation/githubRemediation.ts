@@ -1,5 +1,5 @@
 /**
- * githubRemediation.ts
+ * orchestrator/worker/services/remediation/githubRemediation.ts
  * ------------------------------------------------------------
  * Centralized integration layer between the orchestrator-worker
  * and the core-github-api service.
@@ -13,6 +13,8 @@
  */
 
 import type { Env } from '../../types'
+import { createDatabaseService } from '../../database/database'
+import { followups, operationLogs } from '../../database/ops/schema'
 
 interface TreeEntry {
   path: string
@@ -46,10 +48,10 @@ export interface ErrorItem {
 }
 
 /**
- * Derives bindings from the global Env (including D1).
- * GitHub-specific environment variables are runtime vars not defined in wrangler.jsonc.
+ * Environment interface for GitHub remediation operations.
+ * Extends Env to get DB binding, plus GitHub-specific environment variables.
  */
-export interface GitHubRemediationEnv extends Pick<Env, 'DB'> {
+export interface GitHubRemediationEnv extends Pick<Env, 'DB_OPS'> {
   CORE_GITHUB_API: string
   GITHUB_API_KEY: string
   GITHUB_OWNER: string
@@ -117,9 +119,10 @@ export const githubRemediation = {
     if (!file.url) throw new Error(`File ${e.file_path} has no URL`)
 
     const raw = await fetch(file.url).then((r) => r.text())
-    const injected = raw.includes(e.placeholder)
+    const placeholder = e.placeholder || 'PLACEHOLDER_NOT_SPECIFIED'
+    const injected = raw.includes(placeholder)
       ? raw
-      : `${raw}\n\n// ${e.placeholder}\n###${e.placeholder}###`
+      : `${raw}\n\n// ${placeholder}\n###${placeholder}###`
 
     const b64 = btoa(injected)
 
@@ -177,12 +180,16 @@ export const githubRemediation = {
       }),
     }).then((r) => r.json())
 
-    await env.DB.prepare(
-      `INSERT INTO followups (order_id, task_uuid, type, impact_level, status, note, data)
-       VALUES (?, ?, 'blocked', 1, 'open', ?, ?)`
-    )
-      .bind(e.order_id, e.task_uuid, note, JSON.stringify(resp))
-      .run()
+    const db = createDatabaseService(env as Env)
+    await db.ops.insert(followups).values({
+      orderId: e.order_id ?? null,
+      taskUuid: e.task_uuid ?? null,
+      type: 'blocked',
+      impactLevel: 1,
+      status: 'open',
+      note,
+      data: resp,
+    })
 
     await logOp(env, e, 'github.createIssue', 'error', resp)
     return resp
@@ -197,16 +204,13 @@ async function logOp(
   level: string,
   details: any,
 ) {
-  await env.DB.prepare(
-    `INSERT INTO operation_logs (source, order_id, task_uuid, operation, level, details)
-     VALUES ('github-remediation', ?, ?, ?, ?, ?)`
-  )
-    .bind(
-      e.order_id ?? null,
-      e.task_uuid ?? null,
-      operation,
-      level,
-      JSON.stringify(details ?? {}),
-    )
-    .run()
+  const db = createDatabaseService(env as Env)
+  await db.ops.insert(operationLogs).values({
+    source: 'github-remediation',
+    orderId: e.order_id ?? null,
+    taskUuid: e.task_uuid ?? null,
+    operation,
+    level,
+    details: details ?? {},
+  })
 }

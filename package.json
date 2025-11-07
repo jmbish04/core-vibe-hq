@@ -1,0 +1,31 @@
+{
+  "name": "core-vibe-hq",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "workspaces": [
+    "orchestrator",
+    "apps/ops-specialists/conflict-specialist",
+    "apps/ops-specialists/delivery-report-specialist"
+  ],
+  "scripts": {
+    "install:all": "bash scripts/install-all.sh",
+    "types:all": "bash scripts/types-all.sh",
+    "typecheck:all": "bash scripts/typecheck-all.sh",
+    "lint:all": "bash scripts/lint-all.sh",
+    "problems": "bash scripts/run-problems.sh",
+    "analyze-problems": "tsx scripts/analyze-problems.ts",
+    "deploy": "bash scripts/deploy.sh",
+    "deploy:all": "bash scripts/deploy.sh all",
+    "dev": "bash scripts/dev.sh",
+    "db:migrate:local": "cd orchestrator && npm run db:migrate:local",
+    "db:migrate:remote": "cd orchestrator && npm run db:migrate:remote",
+    "db:generate": "cd orchestrator && npm run db:generate",
+    "update:wrangler": "bash scripts/update-wrangler.sh",
+    "create-worker": "tsx scripts/create-worker.ts"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20251014.0",
+    "typescript": "^5.9.3"
+  }
+}

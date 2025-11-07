@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Core Vibe HQ Infographic</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 350px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+                max-height: 400px;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+
+        <header class="text-center my-12 md:my-20">
+            <h1 class="text-4xl md:text-6xl font-black text-gray-900 leading-tight">
+                Go From <span class="text-[#0044FF]">Idea</span> to <span class="text-[#33D1FF]">Deployed App</span>
+            </h1>
+            <p class="text-xl md:text-2xl text-gray-600 mt-4 max-w-3xl mx-auto">
+                Core Vibe HQ provides an autonomous AI development team right in your browser. This is how it transforms your workflow.
+            </p>
+        </header>
+
+        <section class="mb-16 md:mb-24">
+            <div class="bg-white rounded-lg shadow-xl p-6 md:p-10">
+                <div class="grid md:grid-cols-2 gap-8 items-center">
+                    <div class="order-2 md:order-1">
+                        <h2 class="text-3xl font-bold text-gray-900 mb-4">Stop Wasting Time on Setup</h2>
+                        <p class="text-gray-600 text-lg mb-6">
+                            The traditional development process is bogged down by repetitive setup tasks. `git clone`, `npm install`, dependency mismatches, and configuration hell steal valuable time before you write a single line of business logic.
+                        </p>
+                        <p class="text-gray-600 text-lg">
+                            This chart illustrates the typical time sink. Core Vibe HQ eliminates this "setup" phase entirely, letting you and your AI team start building immediately.
+                        </p>
+                    </div>
+                    <div class="order-1 md:order-2">
+                        <div class="chart-container">
+                            <canvas id="setupTimeChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-16 md:mb-24">
+            <div class="text-center max-w-3xl mx-auto">
+                <h2 class="text-4xl font-bold text-gray-900 mb-4">Your Full In-Browser IDE</h2>
+                <p class="text-lg text-gray-600 mb-10">
+                    Get a complete developer experience without touching your local machine. Your AI team works within a familiar environment, and you have full visibility and control to review, edit, and guide the process.
+                </p>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+                <div class="bg-white rounded-lg shadow-xl p-6 text-center transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
+                    <span class="text-5xl" role="img" aria-label="Code Editor">⌨️</span>
+                    <h3 class="text-xl font-bold text-gray-900 mt-4">Code Editor</h3>
+                    <p class="text-gray-600 mt-2">A full-featured Monaco editor to review and edit all AI-generated code.</p>
+                </div>
+                <div class="bg-white rounded-lg shadow-xl p-6 text-center transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
+                    <span class="text-5xl" role="img" aria-label="File Explorer">📂</span>
+                    <h3 class="text-xl font-bold text-gray-900 mt-4">File Explorer</h3>
+                    <p class="text-gray-600 mt-2">See the entire project structure and file tree as it's being built in real-time.</p>
+                </div>
+                <div class="bg-white rounded-lg shadow-xl p-6 text-center transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
+                    <span class="text-5xl" role="img" aria-label="Live Preview">👁️</span>
+                    <h3 class="text-xl font-bold text-gray-900 mt-4">Live Preview</h3>
+                    <p class="text-gray-600 mt-2">A built-in browser preview that updates live as the agents work on your app.</p>
+                </div>
+                <div class="bg-white rounded-lg shadow-xl p-6 text-center transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
+                    <span class="text-5xl" role="img" aria-label="Terminal">&gt;_</span>
+                    <h3 class="text-xl font-bold text-gray-900 mt-4">Terminal</h3>
+                    <p class="text-gray-600 mt-2">Access a secure cloud terminal to run commands and inspect agent logs.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-16 md:mb-24">
+            <div class="text-center max-w-3xl mx-auto">
+                <h2 class="text-4xl font-bold text-gray-900 mb-4">How It Works: From Prompt to Product</h2>
+                <p class="text-lg text-gray-600 mb-12">
+                    Our platform guides your idea through a simple, transparent, and powerful autonomous workflow.
+                </p>
+            </div>
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                
+                <div class="flex-1 bg-white rounded-lg shadow-xl p-6 text-center w-full md:w-auto">
+                    <div class="text-2xl font-bold bg-[#0044FF] text-white w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-4">1</div>
+                    <h3 class="text-xl font-bold">Prompt</h3>
+                    <p class="text-gray-600 mt-2">You describe your application, feature, or bug fix in plain English.</p>
+                </div>
+                
+                <div class="text-[#0044FF] text-4xl font-bold rotate-90 md:rotate-0 mx-auto md:mx-4" role="img" aria-label="arrow">→</div>
+
+                <div class="flex-1 bg-white rounded-lg shadow-xl p-6 text-center w-full md:w-auto">
+                    <div class="text-2xl font-bold bg-[#0044FF] text-white w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-4">2</div>
+                    <h3 class="text-xl font-bold">Plan</h3>
+                    <p class="text-gray-600 mt-2">The AI team generates a step-by-step "Blueprint" (the plan) for your approval.</p>
+                </div>
+
+                <div class="text-[#0044FF] text-4xl font-bold rotate-90 md:rotate-0 mx-auto md:mx-4" role="img" aria-label="arrow">→</div>
+
+                <div class="flex-1 bg-white rounded-lg shadow-xl p-6 text-center w-full md:w-auto">
+                    <div class="text-2xl font-bold bg-[#0044FF] text-white w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-4">3</div>
+                    <h3 class="text-xl font-bold">Build</h3>
+                    <p class="text-gray-600 mt-2">Agents execute the plan: writing code, running commands, and searching the web.</p>
+                </div>
+                
+                <div class="text-[#0044FF] text-4xl font-bold rotate-90 md:rotate-0 mx-auto md:mx-4" role="img" aria-label="arrow">→</div>
+
+                <div class="flex-1 bg-white rounded-lg shadow-xl p-6 text-center w-full md:w-auto">
+                    <div class="text-2xl font-bold bg-[#0044FF] text-white w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-4">4</div>
+                    <h3 class="text-xl font-bold">Preview</h3>
+                    <p class="text-gray-600 mt-2">Your application is deployed to a live preview URL for you to test instantly.</p>
+                </div>
+
+                <div class="text-[#0044FF] text-4xl font-bold rotate-90 md:rotate-0 mx-auto md:mx-4" role="img" aria-label="arrow">→</div>
+                
+                <div class="flex-1 bg-white rounded-lg shadow-xl p-6 text-center w-full md:w-auto">
+                    <div class="text-2xl font-bold bg-[#0044FF] text-white w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-4">5</div>
+                    <h3 class="text-xl font-bold">Iterate</h3>
+                    <p class="text-gray-600 mt-2">You give feedback or upload screenshots, and the agents refine the app.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-16 md:mb-24">
+            <div class="bg-white rounded-lg shadow-xl p-6 md:p-10">
+                <div class="grid md:grid-cols-2 gap-8 items-center">
+                    <div>
+                        <h2 class="text-3xl font-bold text-gray-900 mb-4">A True Autonomous Team</h2>
+                        <p class="text-gray-600 text-lg mb-6">
+                            This is not just a chatbot. Core Vibe HQ uses a team of specialized agents with a full toolkit. This enables them to perform complex tasks far beyond simple code completion.
+                        </p>
+                        <p class="text-gray-600 text-lg">
+                            Unlike traditional chatbots that excel at code generation but fail at complex, multi-step tasks, our agents can plan, debug using vision, manage Git operations, and more.
+                        </p>
+                    </div>
+                    <div>
+                        <div class="chart-container">
+                            <canvas id="agentCapabilitiesChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-16 md:mb-24">
+            <div class="bg-white rounded-lg shadow-xl p-6 md:p-10">
+                <div class="grid md:grid-cols-2 gap-8 items-center">
+                    <div class="order-2 md:order-1">
+                        <div class="chart-container">
+                            <canvas id="byokChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="order-1 md:order-2">
+                        <h2 class="text-3xl font-bold text-gray-900 mb-4">Your Code, Your Control, Your Keys</h2>
+                        <p class="text-gray-600 text-lg mb-6">
+                            We believe in empowering developers. You're never locked in. You get full control over the AI models that power your team and full ownership of the code they produce.
+                        </p>
+                        <ul class="space-y-4">
+                            <li class="flex items-start">
+                                <span class="text-[#0044FF] text-2xl font-bold mr-3" role="img" aria-label="check">✓</span>
+                                <span class="text-gray-600 text-lg"><strong class="text-gray-800">Bring Your Own Key (BYOK):</strong> Securely use your own API keys for OpenAI, Anthropic, Google, and other models.</span>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="text-[#0044FF] text-2xl font-bold mr-3" role="img" aria-label="check">✓</span>
+                                <span class="text-gray-600 text-lg"><strong class="text-gray-800">One-Click GitHub Export:</strong> Export the entire codebase to your own GitHub repository at any time.</span>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="text-[#0044FF] text-2xl font-bold mr-3" role="img" aria-label="check">✓</span>
+                                <span class="text-gray-600 text-lg"><strong class="text-gray-800">Autonomous Git Conflict Resolution:</strong> Our "Conflict Specialist" agent will autonomously resolve Git conflicts for you.</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <footer class="text-center my-12 md:my-20">
+            <h2 class="text-4xl font-black text-gray-900">
+                Core Vibe HQ
+            </h2>
+            <p class="text-xl text-gray-600 mt-3">
+                Your partner, co-pilot, and entire development team.
+            </p>
+        </footer>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const primaryColor = '#0044FF';
+            const secondaryColor = '#33D1FF';
+            const tertiaryColor = '#A149FF';
+            const warningColor = '#FF6B00';
+            const textColor = '#111827';
+            const subTextColor = '#6b7280';
+            const gridColor = '#e5e7eb';
+
+            const tooltipTitleCallback = (tooltipItems) => {
+                const item = tooltipItems[0];
+                let label = item.chart.data.labels[item.dataIndex];
+                if (Array.isArray(label)) {
+                    return label.join(' ');
+                } else {
+                    return label;
+                }
+            };
+            
+            const sharedOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: textColor
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: tooltipTitleCallback
+                        },
+                        titleColor: textColor,
+                        bodyColor: textColor,
+                        backgroundColor: '#ffffff',
+                        borderColor: gridColor,
+                        borderWidth: 1
+                    }
+                }
+            };
+
+            const setupTimeCtx = document.getElementById('setupTimeChart')?.getContext('2d');
+            if (setupTimeCtx) {
+                new Chart(setupTimeCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: [['Environment', 'Setup'], ['Actual', 'Coding']],
+                        datasets: [{
+                            label: 'Time Allocation',
+                            data: [70, 30],
+                            backgroundColor: [warningColor, primaryColor],
+                            borderColor: '#ffffff',
+                            borderWidth: 4
+                        }]
+                    },
+                    options: {
+                        ...sharedOptions,
+                        plugins: {
+                            ...sharedOptions.plugins,
+                            legend: {
+                                position: 'bottom',
+                                labels: { color: textColor }
+                            }
+                        }
+                    }
+                });
+            }
+
+            const capabilitiesCtx = document.getElementById('agentCapabilitiesChart')?.getContext('2d');
+            if (capabilitiesCtx) {
+                new Chart(capabilitiesCtx, {
+                    type: 'radar',
+                    data: {
+                        labels: ['Code Generation', 'Planning', ['Debugging', '(Vision)'], ['Git', 'Operations'], ['Web', 'Research']],
+                        datasets: [
+                            {
+                                label: 'Core Vibe HQ',
+                                data: [9, 10, 9, 8, 9],
+                                backgroundColor: 'rgba(0, 68, 255, 0.2)',
+                                borderColor: primaryColor,
+                                pointBackgroundColor: primaryColor,
+                                pointBorderColor: '#fff',
+                                pointHoverBackgroundColor: '#fff',
+                                pointHoverBorderColor: primaryColor
+                            },
+                            {
+                                label: 'Traditional Chatbot',
+                                data: [8, 2, 0, 0, 1],
+                                backgroundColor: 'rgba(159, 179, 200, 0.2)',
+                                borderColor: subTextColor,
+                                pointBackgroundColor: subTextColor,
+                                pointBorderColor: '#fff',
+                                pointHoverBackgroundColor: '#fff',
+                                pointHoverBorderColor: subTextColor
+                            }
+                        ]
+                    },
+                    options: {
+                        ...sharedOptions,
+                        scales: {
+                            r: {
+                                angleLines: { color: gridColor },
+                                grid: { color: gridColor },
+                                pointLabels: { color: textColor, font: { size: 12 } },
+                                ticks: {
+                                    backdropColor: 'transparent',
+                                    color: subTextColor,
+                                    stepSize: 2,
+                                    max: 10,
+                                    min: 0
+                                }
+                            }
+                        },
+                        plugins: {
+                            ...sharedOptions.plugins,
+                            legend: {
+                                position: 'bottom',
+                                labels: { color: textColor }
+                            }
+                        }
+                    }
+                });
+            }
+
+            const byokCtx = document.getElementById('byokChart')?.getContext('2d');
+            if (byokCtx) {
+                new Chart(byokCtx, {
+                    type: 'pie',
+                    data: {
+                        labels: ['OpenAI', 'Anthropic', 'Google', 'Other Models'],
+                        datasets: [{
+                            label: 'Supported Model Providers',
+                            data: [40, 30, 20, 10],
+                            backgroundColor: [
+                                primaryColor,
+                                secondaryColor,
+                                tertiaryColor,
+                                warningColor
+                            ],
+                            borderColor: '#ffffff',
+                            borderWidth: 4
+                        }]
+                    },
+                    options: {
+                        ...sharedOptions,
+                        plugins: {
+                            ...sharedOptions.plugins,
+                            legend: {
+                                position: 'bottom',
+                                labels: { color: textColor }
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,952 @@
+⚡️ Cursor Prompt — Orchestrator + Factory Task System (v2, with AI Help & Factory Pull Model)
+
+# PROMPT: Build and Extend Task-Orchestrated Factory Workflow System (v2)
+
+You are working in the **Mission Control Orchestrator Worker**.
+
+The goal is to implement a **task orchestration system** that:
+- Lets factories pull their task lists by order ID
+- Provides per-task help powered by Cloudflare Docs lookup
+- Keeps task comments synchronized in each factory repo
+
+---
+
+## 🧱 PART 1 — D1 Migration
+
+Create a migration file at `migrations/0005_add_orders_and_tasks.sql`:
+
+```sql
+-- Orders Table
+CREATE TABLE IF NOT EXISTS orders (
+  id TEXT PRIMARY KEY,
+  factory TEXT NOT NULL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tasks Table
+CREATE TABLE IF NOT EXISTS tasks (
+  uuid TEXT PRIMARY KEY,
+  order_id TEXT NOT NULL,
+  file_path TEXT NOT NULL,
+  placeholder TEXT NOT NULL,
+  instruction TEXT NOT NULL,
+  status TEXT DEFAULT 'pending',
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (order_id) REFERENCES orders(id)
+);
+```
+
+Run migration via:
+```bash
+wrangler d1 migrations apply <DB_BINDING>
+```
+
+---
+
+## ⚙️ PART 2 — Orchestrator Task Routes (with Cloudflare Docs AI Help)
+
+Create `worker/api/routes/taskRoutes.ts`:
+
+```ts
+import { Hono } from 'hono'
+import { nanoid } from 'nanoid'
+
+export const taskRoutes = new Hono()
+
+// POST /api/orders — Create new order + tasks
+taskRoutes.post('/orders', async (c) => {
+  const body = await c.req.json()
+  const orderId = `ORD-${nanoid(6)}`
+  const db = c.env.DB
+
+  await db.prepare('INSERT INTO orders (id, factory) VALUES (?, ?)').bind(orderId, body.factory).run()
+
+  let tasksCreated = 0
+  for (const file of body.files) {
+    for (const [placeholder, instruction] of Object.entries(file.instructions)) {
+      const uuid = nanoid(6).toUpperCase()
+      await db
+        .prepare('INSERT INTO tasks (uuid, order_id, file_path, placeholder, instruction) VALUES (?, ?, ?, ?, ?)')
+        .bind(uuid, orderId, file.file_path, placeholder, instruction)
+        .run()
+      tasksCreated++
+    }
+  }
+
+  return c.json({ order_id: orderId, tasks_created: tasksCreated })
+})
+
+// GET /api/tasks/:order_id — Retrieve all tasks for an order
+taskRoutes.get('/tasks/:order_id', async (c) => {
+  const orderId = c.req.param('order_id')
+  const db = c.env.DB
+  const tasks = await db.prepare('SELECT * FROM tasks WHERE order_id = ?').bind(orderId).all()
+  return c.json({ order_id: orderId, tasks: tasks.results })
+})
+
+// GET /api/task/:uuid — Retrieve one task
+taskRoutes.get('/task/:uuid', async (c) => {
+  const uuid = c.req.param('uuid')
+  const db = c.env.DB
+  const task = await db.prepare('SELECT * FROM tasks WHERE uuid = ?').bind(uuid).first()
+  return task ? c.json(task) : c.json({ error: 'Not found' }, 404)
+})
+
+// POST /api/task/:uuid/status — Update task status
+taskRoutes.post('/task/:uuid/status', async (c) => {
+  const uuid = c.req.param('uuid')
+  const { status } = await c.req.json()
+  const db = c.env.DB
+  await db.prepare('UPDATE tasks SET status = ? WHERE uuid = ?').bind(status, uuid).run()
+  return c.json({ uuid, status })
+})
+
+/**
+ * POST /api/task/:uuid/help
+ * Accepts:
+ * {
+ *   "agent_name": "gmail-agent",
+ *   "question": "I'm unsure what D1 means in this context",
+ *   "error": "TypeError: fetchD1Record is not a function"
+ * }
+ * 
+ * Returns Cloudflare Docs-assisted guidance.
+ */
+taskRoutes.post('/task/:uuid/help', async (c) => {
+  const uuid = c.req.param('uuid')
+  const { agent_name, question, error } = await c.req.json()
+  const db = c.env.DB
+  const task = await db.prepare('SELECT * FROM tasks WHERE uuid = ?').bind(uuid).first()
+
+  if (!task) return c.json({ error: 'Task not found' }, 404)
+
+  // Use Cloudflare Docs MCP search tool
+  const { results } = await c.env.cloudflare_docs.search({
+    queries: [
+      `+${task.instruction} Cloudflare Workers ${question || ''} ${error || ''} --QDF=2`,
+      `Cloudflare D1 ${question || ''}`,
+      `Cloudflare AI Gateway ${question || ''}`,
+      `Workers KV ${question || ''}`
+    ]
+  })
+
+  const top = results?.[0]?.content?.slice(0, 400) || 'No relevant docs found.'
+
+  return c.json({
+    uuid,
+    agent_name,
+    question,
+    error,
+    original_instruction: task.instruction,
+    ai_guidance: top,
+    summary: `Agent ${agent_name} asked about task ${uuid}. Based on Cloudflare Docs, here’s guidance.`,
+  })
+})
+
+export default taskRoutes
+```
+
+Then mount it in `worker/app.ts`:
+```ts
+import taskRoutes from './api/routes/taskRoutes'
+app.route('/api', taskRoutes)
+```
+
+✅ The help endpoint now:
+- Logs what the agent asked
+- Uses the `cloudflare_docs` tool to search for relevant material
+- Returns synthesized, context-rich help text
+
+---
+
+## 🧬 PART 3 — Factory Initialization Flow (Pull Model)
+
+In the **factory repo**, add a Python script `factory_init.py`:
+
+```python
+import requests, json, re, os, sys
+from pathlib import Path
+
+def inject_task_comment(file_path, uuid, placeholder):
+    path = Path(file_path)
+    if not path.exists():
+        print(f"[WARN] File not found: {path}")
+        return
+    text = path.read_text()
+    comment = f"/* TASK_ID:{uuid} – see .mission_control/tasks.json */\n###{placeholder}###"
+    pattern = re.compile(f"###{placeholder}###")
+    new_text = pattern.sub(comment, text)
+    path.write_text(new_text)
+    print(f"[INJECTED] {placeholder} -> {file_path}")
+
+def main(order_id, orchestrator_url):
+    """Pulls full task list from orchestrator and injects into files."""
+    api_url = f"{orchestrator_url}/api/tasks/{order_id}"
+    print(f"[FETCHING] {api_url}")
+    resp = requests.get(api_url)
+    data = resp.json()
+
+    Path(".mission_control").mkdir(exist_ok=True)
+    with open(".mission_control/tasks.json", "w") as f:
+        json.dump(data, f, indent=2)
+
+    for task in data["tasks"]:
+        inject_task_comment(task["file_path"], task["uuid"], task["placeholder"])
+
+    print(f"[DONE] Tasks saved to .mission_control/tasks.json and injected.")
+
+if __name__ == "__main__":
+    if len(sys.argv) < 3:
+        print("Usage: python3 factory_init.py <ORDER_ID> <ORCHESTRATOR_URL>")
+        sys.exit(1)
+    order_id, orchestrator_url = sys.argv[1], sys.argv[2]
+    main(order_id, orchestrator_url)
+```
+
+### Example Run:
+```bash
+python3 factory_init.py ORD-ABC123 https://orchestrator.example.workers.dev
+```
+
+➡️ This script:
+1. Calls orchestrator endpoint `/api/tasks/{order_id}`  
+2. Writes `.mission_control/tasks.json`  
+3. Iterates over tasks, injecting comments above placeholders in their file paths.
+
+---
+
+## 🧰 PART 4 — Agent Helper Bash Script
+
+Same as before (`taskctl.sh`):
+
+```bash
+#!/bin/bash
+TASKS_FILE=".mission_control/tasks.json"
+
+case "$1" in
+  "get")
+    jq -r --arg ID "$2" '.tasks[] | select(.uuid==$ID) | .instruction' $TASKS_FILE
+    ;;
+  "status")
+    jq -r --arg ID "$2" '.tasks[] | select(.uuid==$ID) | .status' $TASKS_FILE
+    ;;
+  "complete")
+    TMP=$(mktemp)
+    jq --arg ID "$2" '(.tasks[] | select(.uuid==$ID) | .status) = "complete"' $TASKS_FILE > $TMP && mv $TMP $TASKS_FILE
+    ;;
+  "list")
+    jq -r '.tasks[] | [.uuid, .file_path, .status] | @tsv' $TASKS_FILE
+    ;;
+  *)
+    echo "Usage: taskctl {get|status|complete|list} <task_id>"
+    ;;
+esac
+```
+
+---
+
+## 🧪 PART 5 — Quick Test and Seed Script
+
+In the orchestrator repo, add `scripts/seed_orders_and_tasks.py`:
+
+```python
+import requests, json
+API_BASE = "http://127.0.0.1:8787/api"
+
+payload = {
+  "factory": "agent-factory",
+  "files": [
+    {
+      "file_path": "worker/agents/agent_gmail.ts",
+      "instructions": {
+        "FINAL_MILE_PROMPT__AGENT_INIT": "/* Initialize agent state, validate env vars, set up tool registry. Keep initialization idempotent. */",
+        "FINAL_MILE_PROMPT__AGENT_LOGIC": "/* Implement core logic: fetch D1 record, process inputs, stream results via WebSocket. Avoid direct external network calls. */"
+      }
+    }
+  ]
+}
+
+res = requests.post(f"{API_BASE}/orders", json=payload)
+print("[CREATE ORDER]", res.status_code, res.json())
+
+order_id = res.json()["order_id"]
+tasks = requests.get(f"{API_BASE}/tasks/{order_id}").json()
+print(json.dumps(tasks, indent=2))
+```
+
+Run:
+```bash
+python3 scripts/seed_orders_and_tasks.py
+```
+
+Then in the factory repo:
+```bash
+python3 factory_init.py ORD-XXXXXX https://your-orchestrator-url
+```
+
+---
+
+## ✅ TEST FLOW
+
+1. Apply migration → `wrangler d1 migrations apply DB`
+2. Run orchestrator → `wrangler dev`
+3. Seed → creates tasks in D1
+4. Run factory_init.py → fetches and injects tasks
+5. Run help test:
+   ```bash
+   curl -X POST https://your-orchestrator/api/task/A1F2/help \
+   -H 'Content-Type: application/json' \
+   -d '{"agent_name": "gmail-agent", "question": "How to connect D1?", "error": "fetchD1Record not found"}'
+   ```
+
+✅ Response will include:
+- Original instruction
+- Agent name + question
+- Cloudflare Docs snippet with context
+- Guidance summary
+
+---
+
+## 🧠 Notes
+
+- The orchestrator now acts as the **single source of truth** for all orders + tasks.
+- Factories *pull* task manifests and locally track completion.
+- Agents can escalate confusion or runtime errors via `/api/task/:uuid/help`, and get guided answers directly from Cloudflare Docs MCP search.
+
+---
+
+Deliverables:
+✅ `migrations/0005_add_orders_and_tasks.sql`  
+✅ `worker/api/routes/taskRoutes.ts` (with AI help)  
+✅ `scripts/seed_orders_and_tasks.py`  
+✅ `factory_init.py` (pull model)  
+✅ `taskctl.sh`  
+✅ Working Cloudflare Docs help pipeline
+
+
+⸻
+
+part 2
+
+-----
+
+
+Here is that conversation refactored into a clear, instructional prompt, followed by the complete implementation code you provided.
+
+-----
+
+## 🤖 Instructional Prompt
+
+> ### **Objective:**
+>
+> Evolve the existing `colby` factory/orchestrator system to be fully observable and fault-tolerant. This involves implementing a comprehensive logging layer in Cloudflare D1 and a new error-handling loop where the Python factory batches errors and the Cloudflare orchestrator attempts auto-remediation.
+>
+> -----
+>
+> ### **1. D1 Schema Expansion**
+>
+> Create new D1 tables to support logging and error tracking:
+>
+>   * **`operation_logs`**: An append-only log for *every* action taken by any system component (factory, orchestrator, agent).
+>   * **`error_events`**: A structured log for specific, high-priority errors like "file not found."
+>   * **`followups`**: A queue for tasks that require Human-in-the-Loop (HIL) intervention or are permanently blocked.
+>
+> **`followups` Table Schema:**
+>
+>   * `id` (PK)
+>   * `order_id`
+>   * `task_uuid` (nullable)
+>   * `type` (e.g., 'blocked', 'improvement', 'warning', 'auto-fix-applied')
+>   * `impact_level` (Integer 1-5, where 1 is highest)
+>   * `status` (e.g., 'open', 'triaging', 'fixed', 'needs\_human')
+>   * `note` (Text summary)
+>   * `timestamp`
+>   * `github_issue_id` (nullable)
+>
+> -----
+>
+> ### **2. Python Factory (`factory_init.py`) Modifications**
+>
+> The factory script must become fault-tolerant and act as a simple "collector."
+>
+> 1.  **Log Critical Ops:** Send a fire-and-forget `POST` to the orchestrator for key operations (e.g., 'factory-init', 'fetch\_tasks').
+> 2.  **Error Buffering:**
+>       * Create a global `ERRORS = []` list.
+>       * When processing tasks, *do not* exit on failure.
+>       * If `path.exists()` is `False`, append a `FILE_NOT_FOUND` error object to the `ERRORS` list.
+>       * If the task placeholder (e.g., `###PLACEHOLDER###`) is not found in the file, append a `PLACEHOLDER_NOT_FOUND` error object.
+> 3.  **Batch Error Reporting:**
+>       * After iterating through all tasks, check if the `ERRORS` list is non-empty.
+>       * If it is, `POST` the *entire* list to a new `/api/factory/errors` endpoint.
+>
+> -----
+>
+> ### **3. Cloudflare Orchestrator (Worker) Modifications**
+>
+> The orchestrator is responsible for logging, error intake, and all remediation logic.
+>
+> **Endpoint 1: `/api/ops/log`**
+>
+>   * A simple, fire-and-forget endpoint.
+>   * Accepts a JSON payload (`source`, `operation`, `level`, `details`, etc.).
+>   * Writes a single row to the `operation_logs` D1 table.
+>
+> **Endpoint 2: `/api/factory/errors`**
+>
+>   * Accepts the `POST` batch of errors from the Python factory.
+>   * **Logging:** For each error in the batch, insert records into both `operation_logs` (level: 'error') and `error_events`.
+>   * **Auto-Remediation Loop:** Iterate through the errors and attempt to fix them.
+>       * **If `error_code == 'FILE_NOT_FOUND'`:**
+>           * Call a function `tryFindRenamedFile()`. This function (stubbed for now) should query the GitHub repo to see if the file was simply renamed.
+>       * **If `error_code == 'PLACEHOLDER_NOT_FOUND'`:**
+>           * Call a function `tryInsertMissingPlaceholder()`. This function (stubbed for now) should fetch the file from GitHub, send its contents to an AI model, and ask for a corrected version with the placeholder injected.
+>           * **CRITICAL:** Before accepting the AI's patch, you *must* verify that all *other* task placeholders from other tasks in that same file still exist in the new version.
+>   * **Remediation Failed Path:**
+>       * If auto-remediation is not viable (e.g., file is truly gone, AI patch is unsafe), create a new record in the `followups` table.
+>       * Set `type = 'blocked'`, `impact_level = 1`, and `status = 'open'`.
+>       * The orchestrator should then instruct the factory (via the endpoint's JSON response) to mark these tasks as `status: blocked` in its local `tasks.json`.
+>   * **Remediation Succeeded Path:**
+>       * If the issue is fixed (e.g., file path updated, patch applied):
+>       * Create a `followups` record with `type = 'auto-fix-applied'`, `status = 'fixed'`.
+>       * **Auto-PR:** The orchestrator should *automatically open a Pull Request* to the main `templates` repo with the fix and save the PR URL/ID to the `followups.github_issue_id` field.
+
+-----
+
+## 💻 Codex Implementation
+
+Here is the complete solution scaffolded to meet the requirements of that prompt.
+
+### 1\) D1 Schema Migrations
+
+**`migrations/0006_ops_and_followups.sql`**
+
+```sql
+-- 1) Low-level append-only ops log
+CREATE TABLE IF NOT EXISTS operation_logs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ts TEXT DEFAULT CURRENT_TIMESTAMP,
+  source TEXT NOT NULL,            -- 'factory-init', 'factory-commit', 'agent', 'orchestrator', etc.
+  order_id TEXT,                   -- nullable, not all ops have one
+  task_uuid TEXT,                  -- nullable
+  operation TEXT NOT NULL,         -- 'fetch_tasks', 'inject_placeholder', 'file_read', 'help_request', 'git_pr', ...
+  level TEXT NOT NULL,             -- 'debug' | 'info' | 'warn' | 'error' | 'critical'
+  details TEXT NOT NULL            -- JSON blob
+);
+
+-- 2) Error events (summarized, dedup friendly)
+CREATE TABLE IF NOT EXISTS error_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ts TEXT DEFAULT CURRENT_TIMESTAMP,
+  order_id TEXT,
+  task_uuid TEXT,
+  factory TEXT,
+  file_path TEXT,
+  placeholder TEXT,
+  error_code TEXT NOT NULL,        -- 'FILE_NOT_FOUND', 'PLACEHOLDER_NOT_FOUND', 'INJECT_FAILED', 'REMEDIATION_FAILED', ...
+  message TEXT NOT NULL,
+  context TEXT                     -- JSON blob
+);
+
+-- 3) Follow-ups queue (for HIL, later automation, or reporting)
+CREATE TABLE IF NOT EXISTS followups (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ts TEXT DEFAULT CURRENT_TIMESTAMP,
+  order_id TEXT NOT NULL,
+  task_uuid TEXT,                  -- nullable if global/order-level
+  type TEXT NOT NULL,              -- 'blocked' | 'improvement' | 'warning' | 'auto-fix-proposed' | 'auto-fix-applied'
+  impact_level INTEGER NOT NULL,   -- 1 (highest) .. 5 (lowest)
+  status TEXT NOT NULL,            -- 'open' | 'triaging' | 'fixed' | 'wontfix' | 'needs_human'
+  note TEXT,                       -- short human-readable summary
+  github_issue_id TEXT,            -- if we opened a GH issue
+  data TEXT                        -- JSON blob (diffs, file contents, etc.)
+);
+```
+
+-----
+
+### 2\) Orchestrator Routes (Cloudflare Worker)
+
+**`worker/api/routes/opsRoutes.ts`**
+
+```typescript
+import { Hono } from 'hono'
+
+export const opsRoutes = new Hono()
+
+opsRoutes.post('/ops/log', async (c) => {
+  const { source, order_id, task_uuid, operation, level = 'info', details = {} } = await c.req.json()
+  await c.env.DB.prepare(
+    `INSERT INTO operation_logs (source, order_id, task_uuid, operation, level, details)
+     VALUES (?, ?, ?, ?, ?, ?)`
+  ).bind(source, order_id ?? null, task_uuid ?? null, operation, level, JSON.stringify(details)).run()
+  return c.json({ ok: true })
+})
+
+export default opsRoutes
+```
+
+**`worker/api/routes/factoryRoutes.ts`**
+
+```typescript
+import { Hono } from 'hono'
+
+type ErrorItem = {
+  order_id: string
+  factory: string
+  file_path: string
+  placeholder?: string
+  task_uuid?: string
+  error_code: 'FILE_NOT_FOUND' | 'PLACEHOLDER_NOT_FOUND' | 'INJECT_FAILED' | 'UNKNOWN'
+  message: string
+  context?: any
+}
+
+export const factoryRoutes = new Hono()
+
+factoryRoutes.post('/factory/errors', async (c) => {
+  const { errors }: { errors: ErrorItem[] } = await c.req.json()
+  const db = c.env.DB
+
+  // 1) Log and persist every error event
+  for (const e of errors) {
+    await db.prepare(
+      `INSERT INTO error_events (order_id, task_uuid, factory, file_path, placeholder, error_code, message, context)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    ).bind(
+      e.order_id ?? null,
+      e.task_uuid ?? null,
+      e.factory,
+      e.file_path,
+      e.placeholder ?? null,
+      e.error_code,
+      e.message,
+      JSON.stringify(e.context ?? {})
+    ).run()
+
+    await db.prepare(
+      `INSERT INTO operation_logs (source, order_id, task_uuid, operation, level, details)
+       VALUES ('factory', ?, ?, 'error_report', 'error', ?)`
+    ).bind(
+      e.order_id ?? null,
+      e.task_uuid ?? null,
+      JSON.stringify(e)
+    ).run()
+  }
+
+  // 2) Attempt remediation per error (best-effort)
+  // NOTE: You’ll wire these helpers to your GitHub + AI pipeline.
+  const remediationResults: any[] = []
+  for (const e of errors) {
+    let result = { task_uuid: e.task_uuid, ok: false, action: 'none', note: '' }
+
+    try {
+      if (e.error_code === 'FILE_NOT_FOUND') {
+        // Example remediation flow:
+        // - Query GitHub repo tree for near-match filename
+        // - If found, update tasks.file_path in D1, return new path
+        const suggestion = await tryFindRenamedFile(c, e)
+        if (suggestion?.new_path) {
+          await c.env.DB.prepare(
+            `UPDATE tasks SET file_path = ? WHERE uuid = ?`
+          ).bind(suggestion.new_path, e.task_uuid ?? '').run()
+
+          await insertFollowup(c, e, {
+            type: 'auto-fix-applied',
+            impact: 2,
+            note: `Updated file_path -> ${suggestion.new_path}`,
+            data: suggestion
+          })
+
+          result = { task_uuid: e.task_uuid, ok: true, action: 'update_file_path', note: suggestion.new_path }
+        } else {
+          await markBlocked(c, e, `Could not resolve missing file; needs human review`)
+          result = { task_uuid: e.task_uuid, ok: false, action: 'blocked', note: 'human required' }
+        }
+      } else if (e.error_code === 'PLACEHOLDER_NOT_FOUND') {
+        // - Fetch file contents from GH
+        // - Ask AI to suggest insertion location for placeholder tag
+        // - Return patched content; verify other task placeholders intact
+        const patch = await tryInsertMissingPlaceholder(c, e)
+        if (patch?.patched && patch?.content) {
+          // Return patch to factory (pattern below) OR open PR automatically
+          result = { task_uuid: e.task_uuid, ok: true, action: 'patch_ready', note: 'send patched file' }
+        } else {
+          await markBlocked(c, e, `Placeholder not found and no safe insertion point identified`)
+          result = { task_uuid: e.task_uuid, ok: false, action: 'blocked', note: 'human required' }
+        }
+      } else {
+        // Unknown/other
+        await insertFollowup(c, e, {
+          type: 'warning',
+          impact: 3,
+          note: `Unhandled error_code=${e.error_code}`,
+          data: e
+        })
+      }
+    } catch (err: any) {
+      await markBlocked(c, e, `Remediation failed: ${err?.message || 'unknown'}`)
+      result = { task_uuid: e.task_uuid, ok: false, action: 'remediation_error', note: err?.message }
+    }
+
+    remediationResults.push(result)
+  }
+
+  return c.json({ ok: true, remediation: remediationResults })
+})
+
+async function insertFollowup(c: any, e: ErrorItem, opts: { type: string, impact: number, note: string, data?: any }) {
+  await c.env.DB.prepare(
+    `INSERT INTO followups (order_id, task_uuid, type, impact_level, status, note, data)
+     VALUES (?, ?, ?, ?, 'open', ?, ?)`
+  ).bind(
+    e.order_id ?? null,
+    e.task_uuid ?? null,
+    opts.type,
+    opts.impact,
+    opts.note,
+    JSON.stringify(opts.data ?? {})
+  ).run()
+}
+
+async function markBlocked(c: any, e: ErrorItem, note: string) {
+  await insertFollowup(c, e, { type: 'blocked', impact: 1, note })
+}
+
+async function tryFindRenamedFile(c: any, e: ErrorItem) {
+  // TODO: implement with GitHub API (list repo tree & fuzzy match)
+  return null
+}
+
+async function tryInsertMissingPlaceholder(c: any, e: ErrorItem) {
+  // TODO: implement using AI (e.g. Gateway-routed LLM) to propose patch
+  // Must verify no other task placeholders are removed.
+  return null
+}
+
+export default factoryRoutes
+```
+
+**`worker/app.ts` (Mounting)**
+
+```typescript
+// ... other imports
+import opsRoutes from './api/routes/opsRoutes'
+import factoryRoutes from './api/routes/factoryRoutes'
+
+// ... app initialization
+app.route('/api', opsRoutes)
+app.route('/api', factoryRoutes)
+// ... other routes
+```
+
+-----
+
+### 3\) Factory Python (`factory_init.py`)
+
+```python
+import requests, json, re, os, sys
+from pathlib import Path
+
+ERRORS = []
+CURRENT_ORDER = ""
+CURRENT_FACTORY = ""
+
+def log_local(op, level, details):
+    print(f"[{level.upper()}] {op} :: {details}")
+
+def inject_task_comment(file_path, uuid, placeholder):
+    path = Path(file_path)
+    if not path.exists():
+        ERRORS.append({
+            "order_id": CURRENT_ORDER,
+            "factory": CURRENT_FACTORY,
+            "file_path": file_path,
+            "placeholder": placeholder,
+            "task_uuid": uuid,
+            "error_code": "FILE_NOT_FOUND",
+            "message": f"File not found: {file_path}",
+            "context": {}
+        })
+        log_local("inject_placeholder", "error", {"file": file_path, "uuid": uuid, "reason": "missing_file"})
+        return
+
+    text = path.read_text()
+    tag = f"###{placeholder}###"
+    if tag not in text:
+        ERRORS.append({
+            "order_id": CURRENT_ORDER,
+            "factory": CURRENT_FACTORY,
+            "file_path": file_path,
+            "placeholder": placeholder,
+            "task_uuid": uuid,
+            "error_code": "PLACEHOLDER_NOT_FOUND",
+            "message": f"Placeholder not found: {placeholder}",
+            "context": {"preview": text[:400]}
+        })
+        log_local("inject_placeholder", "error", {"file": file_path, "uuid": uuid, "reason": "missing_placeholder"})
+        return
+
+    comment = f"/* TASK_ID:{uuid} – see .mission_control/tasks.json */\n{tag}"
+    new_text = text.replace(tag, comment, 1)
+    path.write_text(new_text)
+    log_local("inject_placeholder", "info", {"file": file_path, "uuid": uuid, "status": "injected"})
+
+def main(order_id, orchestrator_url, factory_name):
+    global CURRENT_ORDER, CURRENT_FACTORY
+    CURRENT_ORDER = order_id
+    CURRENT_FACTORY = factory_name
+
+    tasks_url = f"{orchestrator_url}/api/tasks/{order_id}"
+    requests.post(f"{orchestrator_url}/api/ops/log", json={
+        "source": "factory-init",
+        "order_id": order_id,
+        "operation": "fetch_tasks",
+        "level": "info",
+        "details": {"url": tasks_url}
+    })
+
+    resp = requests.get(tasks_url)
+    data = resp.json()
+
+    Path(".mission_control").mkdir(exist_ok=True)
+    with open(".mission_control/tasks.json", "w") as f:
+        json.dump(data, f, indent=2)
+
+    for task in data["tasks"]:
+        inject_task_comment(task["file_path"], task["uuid"], task["placeholder"])
+
+    # After processing all tasks, send errors (if any)
+    if ERRORS:
+        log_local("error_batch", "warn", {"count": len(ERRORS)})
+        rem = requests.post(f"{orchestrator_url}/api/factory/errors", json={"errors": ERRORS}).json()
+        
+        # Optional: Handle remediation response here
+        # e.g., if rem['remediation'] contains patches or new statuses,
+        # update .mission_control/tasks.json or apply file patches.
+        print(f"[REMEDIATION] Orchestrator response: {json.dumps(rem, indent=2)}")
+
+    else:
+        log_local("error_batch", "info", {"count": 0})
+
+    print("[DONE] Tasks saved to .mission_control/tasks.json and injected.")
+
+if __name__ == "__main__":
+    if len(sys.argv) < 4:
+        print("Usage: python3 factory_init.py <ORDER_ID> <ORCHESTRATOR_URL> <FACTORY_NAME>")
+        sys.exit(1)
+    main(sys.argv[1], sys.argv[2], sys.argv[3])
+```
+
+Here is the `openapi.yaml` specification for the two endpoints we designed.
+
+```yaml
+openapi: 3.0.3
+info:
+  title: Colby Orchestrator API
+  version: 1.0.0
+  description: API for logging operations and handling batched factory errors with auto-remediation.
+servers:
+  - url: /api
+    description: Local or deployed worker API prefix
+
+paths:
+  /ops/log:
+    post:
+      summary: Log a Single Operation
+      description: A fire-and-forget endpoint for any component (factory, agent, etc.) to log an operational event.
+      operationId: logOperation
+      tags:
+        - Logging
+      requestBody:
+        description: Operation log payload
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OperationLogRequest'
+      responses:
+        '200':
+          description: Log accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+        '400':
+          description: Bad request (e.g., missing required fields)
+
+  /factory/errors:
+    post:
+      summary: Report and Remediate Factory Errors
+      description: Endpoint for Python factories to batch-report file/placeholder errors and receive remediation instructions.
+      operationId: reportFactoryErrors
+      tags:
+        - Factory
+      requestBody:
+        description: A batch of errors encountered by the factory.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - errors
+              properties:
+                errors:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/ErrorItem'
+      responses:
+        '200':
+          description: Errors received and remediation attempted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RemediationResponse'
+        '400':
+          description: Bad request (e.g., malformed error batch)
+
+components:
+  schemas:
+    OperationLogRequest:
+      type: object
+      required:
+        - source
+        - operation
+      properties:
+        source:
+          type: string
+          description: The source of the log (e.g., 'factory-init', 'agent', 'orchestrator').
+          example: 'factory-init'
+        order_id:
+          type: string
+          description: Optional Order ID associated with the operation.
+          example: 'ord_12345'
+        task_uuid:
+          type: string
+          description: Optional Task UUID associated with the operation.
+          example: 'task_abcde'
+        operation:
+          type: string
+          description: A short code for the operation being performed.
+          example: 'fetch_tasks'
+        level:
+          type: string
+          description: Log level.
+          default: 'info'
+          enum:
+            - debug
+            - info
+            - warn
+            - error
+            - critical
+        details:
+          type: object
+          description: A JSON blob for additional context.
+          additionalProperties: true
+          example:
+            url: "https://.../api/tasks/ord_12345"
+
+    ErrorItem:
+      type: object
+      required:
+        - order_id
+        - factory
+        - file_path
+        - error_code
+        - message
+      properties:
+        order_id:
+          type: string
+          example: 'ord_12345'
+        factory:
+          type: string
+          example: 'template-initializer'
+        file_path:
+          type: string
+          example: 'src/components/NewFeature.tsx'
+        placeholder:
+          type: string
+          example: 'NEW_COMPONENT_STATE'
+        task_uuid:
+          type: string
+          example: 'task_abcde'
+        error_code:
+          type: string
+          enum:
+            - FILE_NOT_FOUND
+            - PLACEHOLDER_NOT_FOUND
+            - INJECT_FAILED
+            - UNKNOWN
+        message:
+          type: string
+          example: 'File not found: src/components/NewFeature.tsx'
+        context:
+          type: object
+          additionalProperties: true
+          example:
+            preview: '...file content preview...'
+
+    RemediationResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+          example: true
+        remediation:
+          type: array
+          items:
+            type: object
+            properties:
+              task_uuid:
+                type: string
+                example: 'task_abcde'
+              ok:
+                type: boolean
+                description: Whether remediation was successful or attempted.
+                example: false
+              action:
+                type: string
+                description: The action taken or the resulting status.
+                example: 'blocked'
+              note:
+                type: string
+                example: 'human required'
+```
+
+
+
+Your task is to introduce a new module under apps/orchestrator/worker/services/remediation/githubRemediation.ts that provides a clean, centralized wrapper around our core-github-api service.
+This module must be written in TypeScript and use Cloudflare’s native runtime APIs.
+
+Context
+	•	The orchestrator-worker uses this helper to auto-remediate missing files or placeholders reported by factories.
+	•	All GitHub operations are proxied through our Cloudflare Worker core-github-api (see OpenAPI: https://core-github-api.hacolby.workers.dev/openapi.json￼).
+	•	All operations must be logged in D1 (operation_logs + followups).
+
+Implementation goals
+	1.	Implement the following exported methods in the helper:
+	•	findRenamedFile(env, errorItem) – fuzzy search repo tree
+	•	fixMissingPlaceholder(env, errorItem) – base64-encode file, upsert, open PR
+	•	createIssue(env, errorItem, note) – open issue, record followup
+	2.	Each method must call logOp() internally to record structured D1 entries.
+	3.	Define an interface GitHubRemediationEnv to strongly type required bindings.
+	4.	Export the entire helper as githubRemediation for import by orchestrator routes.
+	5.	Use these environment bindings:
+	•	CORE_GITHUB_API
+	•	GITHUB_API_KEY
+	•	GITHUB_OWNER
+	•	GITHUB_REPO
+	•	DB (D1)
+	6.	When done, add JSDoc-level header explaining its purpose and design.
+
+Validation
+	•	Run type check and ensure D1 calls use prepare().bind().run() style.
+	•	Import this helper in factoryRoutes.ts and replace existing GitHub remediation logic with calls to githubRemediation.findRenamedFile(), fixMissingPlaceholder(), and createIssue().
+	•	Verify OpenAPI endpoints match those from core-github-api.
+
+Deliverable:
+apps/orchestrator/worker/services/remediation/githubRemediation.ts implementing the above module cleanly with complete typings, docstring headers, and no external dependencies.
