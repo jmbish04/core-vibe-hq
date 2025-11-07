@@ -24,10 +24,12 @@
     "update:wrangler": "bash scripts/update-wrangler.sh",
     "create-worker": "tsx scripts/create-worker.ts",
     "smoke:ai-provider": "node scripts/smoke/codex_taskmaster_unit_test_ai_provider_from_taskmaster.cjs",
-    "test:taskmaster": "node --experimental-vm-modules ./node_modules/.bin/jest --config jest.config.mjs tests/unit/ai-providers/codex-cli.test.js"
+    "test:taskmaster": "node --experimental-vm-modules ./node_modules/.bin/jest --config jest.config.mjs tests/unit/ai-providers/codex-cli.test.js",
+    "mcp:taskmaster": "node scripts/mcp/taskmaster_mcp.mjs"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20251014.0",
+    "@modelcontextprotocol/sdk": "^0.6.0",
     "typescript": "^5.9.3"
   },
   "dependencies": {
