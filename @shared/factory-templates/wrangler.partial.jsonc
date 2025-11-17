@@ -1,0 +1,81 @@
+/**
+ * Shared Wrangler Partial Configuration for Factories
+ * 
+ * This partial config can be merged into each factory's wrangler.jsonc
+ * to standardize service bindings, environment variables, and build settings.
+ * 
+ * Usage: Import this into factory wrangler.jsonc files:
+ * {
+ *   "$ref": "../../@shared/factory-templates/wrangler.partial.jsonc",
+ *   "name": "your-factory-name",
+ *   "main": "worker/index.ts",
+ *   // factory-specific overrides
+ * }
+ */
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  
+  "compatibility_date": "2025-11-04",
+  "compatibility_flags": ["nodejs_compat_v2"],
+  
+  "vars": {
+    // Environment defaults – orchestrator overrides at runtime
+    "NODE_ENV": "production",
+    "FACTORY_NAME": "unset",
+    "AI_PROVIDER": "codex", // overridden by orchestrator
+    "ORCHESTRATOR_URL": "https://vibehq-orchestrator.hacolby.workers.dev",
+    "ORCHESTRATOR_API_KEY": "${ORCHESTRATOR_API_KEY}",
+    "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+  },
+  
+  "services": [
+    // Orchestrator RPC bindings
+    {
+      "binding": "ORCHESTRATOR_FACTORY",
+      "service": "vibehq-orchestrator",
+      "entrypoint": "Factory"
+    },
+    {
+      "binding": "ORCHESTRATOR_GITHUB",
+      "service": "vibehq-orchestrator",
+      "entrypoint": "GitHub"
+    },
+    {
+      "binding": "ORCHESTRATOR_TASKS",
+      "service": "vibehq-orchestrator",
+      "entrypoint": "Tasks"
+    },
+    {
+      "binding": "ORCHESTRATOR_DELIVERY",
+      "service": "vibehq-orchestrator",
+      "entrypoint": "Delivery"
+    },
+    {
+      "binding": "ORCHESTRATOR_LOGGING",
+      "service": "vibehq-orchestrator",
+      "entrypoint": "Logging"
+    }
+  ],
+  
+  "build": {
+    "dockerfile": "./@shared/factory-templates/factory-base.Dockerfile"
+  },
+  
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1.0
+  },
+  
+  "upload_source_maps": true,
+  
+  "ai": {
+    "binding": "AI"
+  },
+  
+  "workers_dev": true,
+  "preview_urls": true
+}
+
+
+
+

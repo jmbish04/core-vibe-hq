@@ -1,0 +1,20 @@
+{
+	"$schema": "../../node_modules/wrangler/config-schema.json",
+	"name": "prompt-chaining",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-01-29",
+	"compatibility_flags": ["nodejs_compat"],
+	"observability": {
+		"enabled": true
+	},
+	"ai": {
+		"binding": "AI"
+	},
+	"workflows": [
+		{
+			"name": "prompt-chaining-workflow",
+			"binding": "PROMPT_CHAINING_WORKFLOW",
+			"class_name": "PromptChainingWorkflow"
+		}
+	]
+}

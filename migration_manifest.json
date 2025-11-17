@@ -1,0 +1,99 @@
+{
+  "name": "STAGING to @shared Migration",
+  "version": "1.0.0",
+  "description": "Migration manifest for moving STAGING code to @shared framework",
+
+  "source_paths": [
+    {
+      "path": "**/*.ts",
+      "destination": "ai-tools",
+      "description": "Copy TypeScript AI tool files"
+    },
+    {
+      "path": "**/*.py",
+      "destination": "ai-tools",
+      "description": "Copy Python AI tool files"
+    },
+    {
+      "path": "container/**/*",
+      "destination": "container",
+      "description": "Copy container infrastructure"
+    },
+    {
+      "path": "types/**/*.ts",
+      "destination": "types",
+      "description": "Copy shared type definitions"
+    }
+  ],
+
+  "import_replacements": [
+    {
+      "pattern": "from ['\"]\\.\\./types/([^'\"]*)['\"]",
+      "replacement": "from '@shared/types/\\1'",
+      "description": "Update relative type imports to @shared/types"
+    },
+    {
+      "pattern": "from ['\"]\\.\\./container/([^'\"]*)['\"]",
+      "replacement": "from '@shared/container/\\1'",
+      "description": "Update relative container imports to @shared/container"
+    },
+    {
+      "pattern": "from ['\"]\\.\\./ai-tools/([^'\"]*)['\"]",
+      "replacement": "from '@shared/ai-tools/\\1'",
+      "description": "Update relative AI tool imports to @shared/ai-tools"
+    },
+    {
+      "pattern": "from ['\"]\\.\\./contracts/([^'\"]*)['\"]",
+      "replacement": "from '@shared/contracts/\\1'",
+      "description": "Update relative contract imports to @shared/contracts"
+    }
+  ],
+
+  "rpc_migrations": [
+    {
+      "file_pattern": "**/database/**/*.ts",
+      "ai_provider": "openai",
+      "context_files": [
+        "@shared/contracts/index.ts",
+        "orchestrator/worker/database/schema.ts"
+      ],
+      "description": "Migrate database access code to use RPC calls"
+    },
+    {
+      "file_pattern": "**/*Service.ts",
+      "ai_provider": "anthropic",
+      "context_files": [
+        "@shared/base/wrangler.base.jsonc",
+        "orchestrator/worker/entrypoints/"
+      ],
+      "description": "Migrate service classes to use orchestrator RPC endpoints"
+    }
+  ],
+
+  "validation": {
+    "typescript": {
+      "enabled": true,
+      "strict": true,
+      "skipLibCheck": true
+    },
+    "imports": {
+      "enabled": true,
+      "checkSharedPaths": true
+    },
+    "rpc": {
+      "enabled": true,
+      "checkDatabasePatterns": true
+    }
+  },
+
+  "backup": {
+    "enabled": true,
+    "backupDir": ".migration_backup"
+  },
+
+  "post_migration": {
+    "run_tests": true,
+    "update_dependencies": true,
+    "generate_docs": false
+  }
+}

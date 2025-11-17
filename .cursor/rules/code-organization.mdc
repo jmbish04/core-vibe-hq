@@ -1,0 +1,39 @@
+---
+description: "Code organization patterns - agents, entrypoints, imports"
+globs:
+  - "orchestrator/worker/**/*.ts"
+  - "apps/**/*.ts"
+alwaysApply: true
+---
+
+# Code Organization
+
+## Agents Folder Structure
+
+- **Location**: 
+  - **Base Class**: `@shared/agents/base/BaseAgent.ts` (shared across all workers)
+  - **Orchestrator Agents**: `orchestrator/worker/agents/`
+  - **Apps Worker Agents**: Can be in their respective worker directories
+- **Base Class**: All agents extend `BaseAgent` from `@shared/agents/base/BaseAgent.ts`
+  - Works in orchestrator (direct DB access) and apps workers (via `ORCHESTRATOR_LOGGING` service binding)
+  - Automatically routes logging to the appropriate mechanism
+- **Logging**: All agents automatically log to D1 and observability
+  - Orchestrator: Direct database access
+  - Apps workers: Via `ORCHESTRATOR_LOGGING` service binding
+- **Database**: 
+  - Orchestrator agents: Use orchestrator's database service directly
+  - Apps worker agents: Use orchestrator service bindings for database operations
+
+## Entrypoints
+
+- **Location**: `orchestrator/worker/entrypoints/`
+- **Pattern**: Each entrypoint is a class extending `BaseWorkerEntrypoint`
+- **Purpose**: Expose RPC methods for apps/ workers to call
+- **Naming**: `[Operation]Ops.ts` (e.g., `TaskOps.ts`, `GitHubOps.ts`)
+
+## Import Paths
+
+- **From apps/ workers to orchestrator**: Use relative paths like `../../../../orchestrator/...` or use service bindings
+- **From orchestrator to apps/ workers**: Use service bindings, not direct imports
+- **Shared types**: Use `@shared/types/...` imports
+- **Within same worker**: Use relative imports

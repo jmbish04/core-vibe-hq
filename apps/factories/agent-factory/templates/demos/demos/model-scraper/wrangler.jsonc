@@ -1,0 +1,54 @@
+{
+	"$schema": "../../node_modules/wrangler/config-schema.json",
+	"name": "model-scraper",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-02-24",
+	"observability": {
+		"enabled": true
+	},
+	"vars": {
+		"ENVIRONMENT": "production"
+	},
+	"env": {
+		"development": {
+			"name": "model-scraper-dev",
+			"vars": {
+				"ENVIRONMENT": "development"
+			},
+			"ai": {
+				"binding": "AI"
+			},
+			"kv_namespaces": [
+				{
+					"binding": "JSON_DATA",
+					"id": "06aed493623c4f3da74003ac7ad85e26",
+					"preview_id": "8b2a23da30bf45f0ba592780a9c0c320"
+				}
+			]
+		},
+		"staging": {
+			"name": "model-scraper-staging",
+			"vars": {
+				"ENVIRONMENT": "staging"
+			},
+			"ai": {
+				"binding": "AI"
+			},
+			"kv_namespaces": [
+				{
+					"binding": "JSON_DATA",
+					"id": "06aed493623c4f3da74003ac7ad85e26"
+				}
+			]
+		}
+	},
+	"ai": {
+		"binding": "AI"
+	},
+	"kv_namespaces": [
+		{
+			"binding": "JSON_DATA",
+			"id": "06aed493623c4f3da74003ac7ad85e26"
+		}
+	]
+}

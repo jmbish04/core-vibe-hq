@@ -109,14 +109,14 @@ jobs:
         with:
           node-version: '20'
       - name: Install dependencies
-        working-directory: apps/orchestrator
+        working-directory: orchestrator
         run: npm ci
       - name: Build & Deploy Worker
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: apps/orchestrator
+          workingDirectory: orchestrator
 
   deploy-agent-factory:
     needs: detect-changes

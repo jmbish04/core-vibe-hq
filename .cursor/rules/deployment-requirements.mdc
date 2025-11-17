@@ -1,0 +1,80 @@
+---
+description: "Deployment requirements - every worker must have a deploy workflow"
+globs:
+  - ".github/workflows/**/*.yml"
+  - "**/wrangler.jsonc"
+  - "apps/**/wrangler.jsonc"
+  - "orchestrator/wrangler.jsonc"
+alwaysApply: true
+---
+
+# Deployment Requirements - CRITICAL
+
+## Every Worker Must Have a Deploy Workflow
+
+⚠️ **CRITICAL**: Every worker in this project MUST have a corresponding GitHub Actions workflow file in `.github/workflows/`:
+
+### Required Workflows
+
+- ✅ **Orchestrator**: `.github/workflows/deploy-orchestrator.yml`
+- ✅ **Agent Factory**: `.github/workflows/deploy-agent-factory.yml`
+- ✅ **Data Factory**: `.github/workflows/deploy-data-factory.yml`
+- ✅ **Services Factory**: `.github/workflows/deploy-services-factory.yml`
+- ✅ **UI Factory**: `.github/workflows/deploy-ui-factory.yml`
+- ✅ **Ops Specialists**: `.github/workflows/deploy-ops-specialists.yml` (covers both conflict and delivery-report specialists)
+
+### When Creating a New Worker
+
+1. Create the worker directory under `apps/` or at root (for orchestrator)
+2. **MUST** create a corresponding deploy workflow in `.github/workflows/deploy-[worker-name].yml`
+3. The workflow should:
+   - Trigger on pushes to `main` branch when worker files change (using `paths:` filter)
+   - Support `workflow_dispatch` for manual deployment
+   - Install dependencies (using `npm ci` or `bun install`)
+   - Deploy using `wrangler-action@v3` or `wrangler deploy`
+   - Include proper environment variables and secrets
+
+### Workflow Naming Convention
+
+- Use kebab-case: `deploy-[worker-name].yml`
+- Example: `deploy-agent-factory.yml`, `deploy-ops-specialists.yml`
+
+### Workflow Structure Template
+
+```yaml
+name: Deploy [Worker Name]
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '[worker-path]/**'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        working-directory: [worker-path]
+        run: npm ci || bun install || echo 'No package.json found'
+      - name: Build & Deploy Worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: [worker-path]
+```
+
+### Verification
+
+- Check that all workers listed in `apps/` and `orchestrator/` have corresponding deploy workflows
+- If a worker is missing a deploy workflow, create it immediately
+- If a worker is removed, remove its deploy workflow as well

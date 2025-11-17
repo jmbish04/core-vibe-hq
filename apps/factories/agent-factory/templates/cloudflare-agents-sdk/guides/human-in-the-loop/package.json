@@ -1,0 +1,14 @@
+{
+  "author": "",
+  "description": "Human in the Loop",
+  "keywords": [],
+  "license": "ISC",
+  "name": "@cloudflare/agents-human-in-the-loop",
+  "private": true,
+  "scripts": {
+    "deploy": "vite build && wrangler deploy",
+    "start": "vite dev"
+  },
+  "type": "module",
+  "version": "0.0.0"
+}

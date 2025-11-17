@@ -1,0 +1,124 @@
+version: 2
+updates:
+  # Root package.json
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    versioning-strategy: increase
+    groups:
+      wrangler:
+        patterns:
+          - "wrangler"
+          - "@cloudflare/wrangler"
+        update-types:
+          - "minor"
+          - "patch"
+          - "major"
+    labels:
+      - "dependencies"
+      - "wrangler"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+
+  # Orchestrator worker (main worker with wrangler 4.x)
+  - package-ecosystem: "npm"
+    directory: "/orchestrator"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    versioning-strategy: increase
+    groups:
+      wrangler:
+        patterns:
+          - "wrangler"
+          - "@cloudflare/wrangler"
+        update-types:
+          - "minor"
+          - "patch"
+          - "major"
+      cloudflare:
+        patterns:
+          - "@cloudflare/*"
+        update-types:
+          - "patch"
+          - "minor"
+      drizzle:
+        patterns:
+          - "drizzle-*"
+          - "drizzle/*"
+        update-types:
+          - "patch"
+          - "minor"
+    labels:
+      - "dependencies"
+      - "orchestrator"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+
+  # Conflict Specialist worker
+  - package-ecosystem: "npm"
+    directory: "/apps/ops-specialists/conflict-specialist"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    versioning-strategy: increase
+    groups:
+      wrangler:
+        patterns:
+          - "wrangler"
+          - "@cloudflare/wrangler"
+        update-types:
+          - "minor"
+          - "patch"
+          - "major"
+    labels:
+      - "dependencies"
+      - "wrangler"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+
+  # Delivery Report Specialist worker
+  - package-ecosystem: "npm"
+    directory: "/apps/ops-specialists/delivery-report-specialist"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    versioning-strategy: increase
+    groups:
+      wrangler:
+        patterns:
+          - "wrangler"
+          - "@cloudflare/wrangler"
+        update-types:
+          - "minor"
+          - "patch"
+          - "major"
+    labels:
+      - "dependencies"
+      - "wrangler"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+
+  # GitHub Actions (if any workflow dependencies need updating)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "ci"
+      - "github-actions"
+    commit-message:
+      prefix: "ci"
+      include: "scope"

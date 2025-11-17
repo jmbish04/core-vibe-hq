@@ -1,0 +1,72 @@
+---
+description: "Database access patterns - ONLY orchestrator has D1 bindings"
+globs:
+  - "**/wrangler.jsonc"
+  - "**/wrangler.base.jsonc"
+  - "orchestrator/**/*.ts"
+  - "apps/**/*.ts"
+alwaysApply: true
+---
+
+# Database Architecture - CRITICAL
+
+## D1 Database Access Pattern
+
+**Only the orchestrator worker has direct D1 database bindings.**
+
+- ✅ **Orchestrator** (`orchestrator/wrangler.jsonc`): Has `DB` binding to D1
+- ❌ **Apps Workers** (`apps/*/wrangler.jsonc`): **MUST NOT** have:
+  - D1 bindings (`d1_databases`)
+  - KV bindings (`kv_namespaces`)
+  - R2 bindings (`r2_buckets`)
+  - Any other Cloudflare data bindings
+
+## Database Communication Rules
+
+### Factory → Database (Apps Workers need DB access)
+
+**All database operations from apps/ workers MUST go through orchestrator service bindings (RPC entrypoints)**
+
+1. **Use service bindings**: `ORCHESTRATOR_*` (defined in `@shared/base/wrangler.base.jsonc`)
+2. **Available entrypoints**: `GitHubOps`, `TaskOps`, `FactoryOps`, `DeliveryOps`, `LoggingOps`, `OpsOps`, `HealthCheckOps`
+3. **If a new feature requires database access from an apps/ worker:**
+   - Create a new entrypoint in `orchestrator/worker/entrypoints/` (e.g., `ProjectOps.ts`)
+   - The entrypoint class must extend `BaseWorkerEntrypoint`
+   - Add service binding to `@shared/base/wrangler.base.jsonc`:
+     ```jsonc
+     {
+       "binding": "ORCHESTRATOR_[OPERATION]",
+       "service": "vibehq-orchestrator",
+       "entrypoint": "[OperationName]Ops"
+     }
+     ```
+   - Apps worker calls via: `env.ORCHESTRATOR_[OPERATION].method(...)`
+
+### Orchestrator → Factory (Orchestrator needs to call apps/ workers)
+
+1. **All communication from orchestrator to apps/ workers MUST use service bindings**
+2. **Add service binding in `orchestrator/wrangler.jsonc`**:
+   ```jsonc
+   {
+     "binding": "[FACTORY]_SERVICE",
+     "service": "[factory-name]"
+   }
+   ```
+3. **Apps worker MUST expose entrypoint** (WorkerEntrypoint class)
+4. **Orchestrator calls via**: `env.[FACTORY]_SERVICE.fetch(request)` or RPC methods
+
+### Example: Adding Database Access from Apps Worker
+
+**Scenario**: Agent factory needs to query project requirements
+
+**Solution**:
+1. Create new entrypoint in `orchestrator/worker/entrypoints/ProjectOps.ts`
+2. Add service binding in `@shared/base/wrangler.base.jsonc`:
+   ```jsonc
+   {
+     "binding": "ORCHESTRATOR_PROJECT",
+     "service": "vibehq-orchestrator",
+     "entrypoint": "ProjectOps"
+   }
+   ```
+3. Agent factory calls via: `env.ORCHESTRATOR_PROJECT.getRequirements(...)`

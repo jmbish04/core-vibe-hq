@@ -1,0 +1,10 @@
+[
+    "src/lib/",
+    "src/hooks/",
+    "src/pages/",
+    "src/styles/",
+    "tailwind.config.js",
+    "tsconfig.json",
+    "components.json",
+    "package.json"
+]

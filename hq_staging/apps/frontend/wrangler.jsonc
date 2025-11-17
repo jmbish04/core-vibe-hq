@@ -1,0 +1,27 @@
+/**
+ * UI Factory Worker Configuration
+ * 
+ * Extends the shared base configuration. All database operations
+ * go through orchestrator service bindings.
+ */
+{
+  "$ref": "../../@shared/base/wrangler.base.jsonc",
+  
+  "name": "ui-factory",
+  "main": "worker/index.ts",
+  
+  // Development settings with unique port
+  "dev": {
+    "port": 8791,
+    "local_protocol": "http"
+  },
+  
+  // UI Factory specific environment variables
+  "vars": {
+    "FACTORY_TYPE": "ui",
+    "MAX_CONCURRENT_BUILDS": "8",
+    "DEFAULT_MODEL": "@cf/openai/gpt-oss-120b",
+    "WORKER_NAME": "UI Factory",
+    "DIAGNOSTICS_ENABLED": "true"
+  }
+}

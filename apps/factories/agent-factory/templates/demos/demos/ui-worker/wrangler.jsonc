@@ -1,0 +1,14 @@
+{
+	"$schema": "../../node_modules/wrangler/config-schema.json",
+	"name": "ui-worker",
+	"main": "src/server/index.ts",
+	"compatibility_date": "2025-02-24",
+	"assets": {
+		"not_found_handling": "single-page-application",
+		"binding": "ASSETS",
+		"directory": "./dist/client"
+	},
+	"observability": {
+		"enabled": true
+	}
+}

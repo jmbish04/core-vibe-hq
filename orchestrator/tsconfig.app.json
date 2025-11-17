@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "allowJs": true,
+    "strict": true,
+    "noEmit": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "types": ["vite/client"],
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@shared/*": ["../@shared/*"],
+      "partykit/partyserver": ["../third_party/partykit/packages/partyserver/src/index.ts"],
+      "partykit/partysocket": ["../third_party/partykit/packages/partysocket/src/index.ts"],
+      "partykit/hono-party": ["../third_party/partykit/packages/hono-party/src/index.ts"]
+    }
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "../@shared/base/workerEntrypoint.ts",
+    "../@shared/base/worker-configuration.d.ts",
+    "../@shared/**/*"
+  ]
+}

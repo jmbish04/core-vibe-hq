@@ -1,0 +1,67 @@
+---
+description: "Quick reference table and common mistakes to avoid"
+globs:
+  - "**/*.ts"
+  - "**/*.tsx"
+alwaysApply: true
+---
+
+# Quick Reference and Common Mistakes
+
+## Quick Reference Table
+
+| Need | Solution |
+|------|----------|
+| Apps worker needs DB access | Use orchestrator service binding entrypoint |
+| Orchestrator needs apps worker | Add service binding, apps worker exposes entrypoint |
+| New tables | Add to Drizzle schema, generate migration |
+| New documentation | Create in `docs/`, update `docs/OVERVIEW.md` |
+| Migrations location | Only `orchestrator/migrations/` |
+| Database queries | Use Drizzle ORM, never raw SQL |
+| Shared config | Use `@shared/base/wrangler.base.jsonc` via `$ref` |
+| Shared types | Use `@shared/types/` imports |
+| New worker created | **MUST** create deploy workflow in `.github/workflows/` |
+| Check all problems | Run `npm run problems` before reporting completion |
+| Before feature complete | Clear ALL TypeScript, linting, and type errors |
+| Fix TypeScript errors | **NEVER** use `as any` or `@ts-ignore` - fix types properly |
+
+## Common Mistakes to Avoid
+
+1. ❌ **Creating orchestrator files under `apps/orchestrator/`** - Orchestrator is at root `orchestrator/`
+2. ❌ **Adding D1 bindings to apps/ workers** - Use orchestrator service bindings instead
+3. ❌ **Using Workers for Platforms features** - This project uses paid Workers ($5/month) only, NOT Workers for Platforms
+4. ❌ **Adding dispatch_namespaces** - Use service bindings or HTTP fetch instead
+5. ❌ **Using raw SQL queries** - Always use Drizzle ORM
+6. ❌ **Creating migrations in apps/ folders** - Only `orchestrator/migrations/`
+7. ❌ **Manual SQL migration files** - Use Drizzle Kit to generate from schema
+8. ❌ **Creating docs in subdirectories** - All docs go in `docs/` folder
+9. ❌ **Duplicating wrangler config** - Use `$ref` to extend `@shared/base/wrangler.base.jsonc`
+10. ❌ **Direct database access from apps/ workers** - Always use orchestrator entrypoints
+11. ❌ **Creating worker without deploy workflow** - Every worker MUST have `.github/workflows/deploy-[worker-name].yml`
+12. ❌ **Reporting feature complete with errors** - MUST run `npm run problems` and resolve ALL errors first
+13. ❌ **Using `as any` or type shortcuts** - **NEVER** use `as any`, `@ts-ignore`, or type assertions to bypass errors - fix types properly
+
+## Problem Resolution Before Feature Completion
+
+⚠️ **CRITICAL**: Before reporting that a feature is fully implemented, you MUST:
+
+1. Run `npm run problems` (checks TypeScript, linting, and Wrangler types)
+2. Resolve ALL errors from the Problems tab in Cursor/VSCode
+3. Only after all problems are cleared, report feature completion
+
+## Deployment Requirements
+
+⚠️ **CRITICAL**: Every worker MUST have a deploy workflow:
+
+- Every worker needs `.github/workflows/deploy-[worker-name].yml`
+- Workflow must trigger on pushes to `main` and support `workflow_dispatch`
+- Workflow must install dependencies and deploy using `wrangler-action@v3`
+
+## When in Doubt
+
+1. Check `docs/development/agent-instructions.md` for detailed patterns
+2. Look at existing code for examples (e.g., how other apps/ workers access DB)
+3. Verify orchestrator entrypoints exist before creating new ones
+4. Ensure service bindings are properly configured in `@shared/base/wrangler.base.jsonc`
+5. Verify deploy workflow exists for any new worker
+6. Run `npm run problems` before reporting completion

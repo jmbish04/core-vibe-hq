@@ -1,0 +1,48 @@
+---
+description: "Infrastructure model - Paid Workers only, NOT Workers for Platforms"
+globs:
+  - "**/wrangler.jsonc"
+  - "**/*.ts"
+alwaysApply: true
+---
+
+# Infrastructure Model - CRITICAL
+
+## ⚠️ Workers Infrastructure
+
+**This project uses paid Cloudflare Workers ($5/month per worker), NOT Workers for Platforms.**
+
+- ✅ **Paid Workers**: Standard Cloudflare Workers with service bindings
+- ❌ **Workers for Platforms**: **MUST NOT** use `dispatch_namespaces` or any Workers for Platforms features
+- ❌ **Dispatch Namespaces**: **DO NOT** add `dispatch_namespaces` to any `wrangler.jsonc` files
+- ❌ **Dynamic Dispatch**: **DO NOT** use `DispatchNamespace` or dynamic dispatch features
+
+## Communication Between Workers
+
+**All communication between workers uses:**
+- Service bindings (RPC entrypoints)
+- Standard HTTP fetch between workers
+- **NOT** dispatch namespaces or Workers for Platforms APIs
+
+## Legacy Code Cleanup
+
+**If you see references to `DISPATCHER` or `DISPATCH_NAMESPACE` in code:**
+- These are legacy/unused and should be removed or refactored
+- Do not add new code that depends on dispatch namespaces
+- Remove any `dispatch_namespaces` sections from `wrangler.jsonc` files
+- Remove `DISPATCH_NAMESPACE` environment variables if not needed
+
+## What NOT to Add
+
+When adding new features or configuring workers:
+
+- ❌ **Never add** `dispatch_namespaces` to `wrangler.jsonc`
+- ❌ **Never use** `DispatchNamespace` type or API
+- ❌ **Never use** `env.DISPATCHER` or dispatch namespace bindings
+- ❌ **Never reference** Workers for Platforms documentation or features
+
+## What to Use Instead
+
+- ✅ **Service bindings** for RPC communication between workers
+- ✅ **Standard HTTP fetch** for worker-to-worker communication
+- ✅ **Paid Workers** infrastructure ($5/month per worker)

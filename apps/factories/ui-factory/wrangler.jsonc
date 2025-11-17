@@ -1,0 +1,31 @@
+{
+  "$ref": "../../@shared/base/wrangler.base.jsonc",
+  "name": "ui-factory",
+  "main": "worker/index.ts",
+  "dev": {
+    "port": 8791,
+    "local_protocol": "http"
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "UIFactoryAgent",
+        "class_name": "UIFactoryAgent"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["UIFactoryAgent"]
+    }
+  ],
+  "vars": {
+    "FACTORY_TYPE": "ui",
+    "MAX_CONCURRENT_BUILDS": "8",
+    "DEFAULT_MODEL": "@cf/openai/gpt-oss-120b",
+    "WORKER_NAME": "UI Factory",
+    "DIAGNOSTICS_ENABLED": "true"
+  },
+  "compatibility_date": "2025-03-07"
+}

@@ -1,0 +1,48 @@
+{
+  "name": "health-specialist",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "setup": "tsx scripts/setup.ts",
+    "prepare": "husky",
+    "dev": "DEV_MODE=true vite",
+    "build": "tsc -b --incremental && vite build",
+    "typecheck": "tsc -b --incremental --noEmit",
+    "lint": "eslint .",
+    "preview": "npm run build && vite preview",
+    "deploy": "wrangler deploy",
+    "cf-typegen": "wrangler types --include-runtime false",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "knip": "knip",
+    "knip:fix": "knip --fix",
+    "knip:production": "knip --production",
+    "knip:dependencies": "knip --dependencies",
+    "knip:exports": "knip --exports"
+  },
+  "dependencies": {
+    "@cloudflare/containers": "^0.0.28",
+    "agents": "^0.2.20",
+    "cloudflare": "^4.5.0",
+    "drizzle-orm": "^0.44.7",
+    "hono": "^4.10.4",
+    "kysely": "^0.27.4",
+    "kysely-d1": "^0.3.0",
+    "nanoid": "^5.1.6",
+    "partysocket": "^1.1.6",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.13.18",
+    "@cloudflare/vitest-pool-workers": "^0.8.71",
+    "@cloudflare/workers-types": "^4.20251014.0",
+    "@types/node": "^22.18.13",
+    "drizzle-kit": "^0.31.6",
+    "typescript": "^5.9.3",
+    "vite": "npm:rolldown-vite@7.1.13",
+    "vitest": "^3.2.4",
+    "wrangler": "4.45.0"
+  }
+}

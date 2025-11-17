@@ -1,0 +1,164 @@
+---
+description: "Repository structure master reference - where to create files and organize code"
+globs:
+  - "**/*.ts"
+  - "**/*.tsx"
+  - "**/*.json"
+  - "**/*.jsonc"
+  - "**/*.md"
+alwaysApply: true
+---
+
+# Repository Structure - CRITICAL
+
+## Master Reference
+
+**See `docs/REPO_STRUCTURE_REFERENCE.md` for complete directory structure.**
+
+## Key Directories
+
+### `@shared/` - Shared Code Library
+
+**Purpose**: Code shared across ALL workers (orchestrator + apps/ workers)
+
+**What goes here**:
+- ✅ Base classes (`BaseWorkerEntrypoint`, `BaseAgent`)
+- ✅ Shared TypeScript types (`@shared/types/`)
+- ✅ Shared utilities and clients (`@shared/clients/`, `@shared/handlers/`)
+- ✅ Container infrastructure (`@shared/container/`, `@shared/container-terminal/`)
+- ✅ Worker base templates (`@shared/worker-base/`)
+- ✅ AI packages, tools, utilities (`@shared/ai-packages/`, `@shared/ai-tools/`)
+- ✅ Shared wrangler base config (`@shared/base/wrangler.base.jsonc`)
+
+**What does NOT go here**:
+- ❌ Worker-specific code
+- ❌ Orchestrator-specific code (use `orchestrator/` instead)
+
+**Note**: Factory templates ARE in `@shared/` under `@shared/factory-templates/`
+
+**Import pattern**: `import { ... } from '@shared/[module]/[file]'`
+
+### `@shared/factory-templates/` - Factory Initialization Templates
+
+**Purpose**: Templates and configs for INITIALIZING new factories
+
+**What goes here**:
+- ✅ `factory-base.Dockerfile` - Base Docker image for factories
+- ✅ `wrangler.partial.jsonc` - Template wrangler config
+- ✅ Factory initialization scripts
+- ✅ Factory-specific documentation
+
+**What does NOT go here**:
+- ❌ Shared code used at runtime (use other `@shared/` subdirectories instead)
+- ❌ Worker base classes (use `@shared/base/` instead)
+- ❌ Container infrastructure (use `@shared/container/` instead)
+- ❌ AI packages or tools (use `@shared/ai-packages/` instead)
+
+**Usage**: These files are COPIED when creating a new factory, not imported
+
+### `orchestrator/` - Orchestrator Worker
+
+**Purpose**: The orchestrator worker (special, at root level)
+
+**What goes here**:
+- ✅ Orchestrator worker code
+- ✅ Database schemas and migrations (ONLY location: `orchestrator/migrations/`)
+- ✅ Orchestrator-specific entrypoints
+- ✅ Orchestrator wrangler config (independent, doesn't extend base)
+
+**What does NOT go here**:
+- ❌ Shared code (use `@shared/` instead)
+- ❌ Factory templates (use `factory/shared/` instead)
+
+### `apps/` - Independent Workers
+
+**Purpose**: Individual Cloudflare Workers deployed separately
+
+**What goes here**:
+- ✅ Worker-specific code
+- ✅ Worker-specific wrangler.jsonc (extends `@shared/base/wrangler.base.jsonc`)
+- ✅ Worker-specific package.json
+- ✅ Worker-specific Dockerfile (copied from `factory/shared/factory-base.Dockerfile`)
+
+**What does NOT go here**:
+- ❌ Shared code (use `@shared/` instead)
+- ❌ Database migrations (use `orchestrator/migrations/` instead)
+- ❌ Orchestrator code (use `orchestrator/` instead)
+
+## File Creation Decision Tree
+
+**Before creating ANY file, ask:**
+
+1. **Is it shared code used by multiple workers?**
+   - YES → `@shared/[category]/[file]`
+   - NO → Continue to #2
+
+2. **Is it a factory initialization template?**
+   - YES → `@shared/factory-templates/[file]`
+   - NO → Continue to #3
+
+3. **Is it orchestrator-specific?**
+   - YES → `orchestrator/[file]`
+   - NO → Continue to #4
+
+4. **Is it a database migration?**
+   - YES → `orchestrator/migrations/[file].sql` (ONLY location)
+   - NO → Continue to #5
+
+5. **Is it worker-specific?**
+   - YES → `apps/[worker-name]/[file]`
+   - NO → Continue to #6
+
+6. **Is it documentation?**
+   - YES → `docs/[file].md` (update `docs/OVERVIEW.md`)
+
+## Common Mistakes
+
+1. ❌ **Creating `factory/shared/`** - Should be `@shared/factory-templates/`
+2. ❌ **Creating `apps/shared/`** - Should be `@shared/`
+3. ❌ **Creating migrations in `apps/`** - Should be `orchestrator/migrations/`
+4. ❌ **Putting shared code outside `@shared/`** - All shared code goes in `@shared/`
+5. ❌ **Putting factory templates outside `@shared/`** - Should be `@shared/factory-templates/`
+6. ❌ **Putting orchestrator code in `apps/orchestrator/`** - Should be `orchestrator/` (root level)
+
+## Migration Rules
+
+### When Migrating from STAGING
+
+- **Container Infrastructure** → `@shared/container/`, `@shared/container-terminal/`, etc.
+- **Worker Templates** → `@shared/worker-base/`
+- **AI Components** → `@shared/ai-packages/`, `@shared/worker-base/ai/`
+- **Frontend Components** → `@shared/frontend/` (if needed)
+- **Dockerfile Base** → `@shared/factory-templates/factory-base.Dockerfile` (templates only)
+
+### When Creating New Shared Code
+
+**Ask**: "Will this be used by multiple workers?"
+- **Yes** → `@shared/[category]/`
+- **No** → Worker-specific directory (`apps/[worker]/` or `orchestrator/`)
+
+### When Creating Factory Templates
+
+**Ask**: "Is this a template for initializing factories?"
+- **Yes** → `@shared/factory-templates/`
+- **No** → Other `@shared/` subdirectories (if shared) or worker-specific
+
+## Verification Checklist
+
+Before creating a file, verify:
+- [ ] Location matches purpose (shared vs template vs worker-specific)
+- [ ] Import paths use `@shared/` for shared code
+- [ ] Factory templates are in `@shared/factory-templates/`
+- [ ] Migrations are in `orchestrator/migrations/`
+- [ ] Documentation is in `docs/`
+- [ ] Orchestrator code is NOT in `apps/orchestrator/`
+
+## Task Master Integration
+
+**Task Master MUST follow this structure when:**
+- Generating code
+- Creating new files
+- Migrating code
+- Initializing workers
+
+**Reference**: Always check `docs/REPO_STRUCTURE_REFERENCE.md` before creating files.

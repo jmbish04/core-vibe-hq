@@ -1,0 +1,147 @@
+/**
+ * Shared Wrangler Configuration Base
+ * 
+ * This file contains common configuration settings that should be inherited
+ * by all downstream Workers in the core-vibe-hq ecosystem.
+ * 
+ * IMPORTANT: Only the orchestrator should have direct access to D1, KV, R2, etc.
+ * All downstream workers communicate through orchestrator service bindings.
+ * 
+ * Usage: Reference this file in individual worker configs using:
+ * { "$ref": "../../@shared/base/wrangler.base.jsonc", ... }
+ */
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  
+  // Common compatibility settings
+  "compatibility_date": "2025-11-03",
+  "compatibility_flags": ["nodejs_compat_v2"],
+  
+  // Observability settings - enable for all workers
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1.0
+  },
+  
+  // Source maps for better debugging
+  "upload_source_maps": true,
+  
+  // Service bindings - ALL operations flow through orchestrator entrypoints
+  "services": [
+    {
+      "binding": "ORCHESTRATOR_GITHUB",
+      "service": "vibehq-orchestrator",
+      "entrypoint": "GitHub"
+    },
+    {
+      "binding": "ORCHESTRATOR_TASKS",
+      "service": "vibehq-orchestrator", 
+      "entrypoint": "Tasks"
+    },
+    {
+      "binding": "ORCHESTRATOR_FACTORY",
+      "service": "vibehq-orchestrator",
+      "entrypoint": "Factory"
+    },
+    {
+      "binding": "ORCHESTRATOR_DELIVERY",
+      "service": "vibehq-orchestrator",
+      "entrypoint": "Delivery"
+    },
+    {
+      "binding": "ORCHESTRATOR_LOGGING",
+      "service": "vibehq-orchestrator",
+      "entrypoint": "Logging"
+    },
+    {
+      "binding": "ORCHESTRATOR_OPS",
+      "service": "vibehq-orchestrator",
+      "entrypoint": "Specialist"
+    },
+    {
+      "binding": "ORCHESTRATOR_OPS_MONITOR",
+      "service": "vibehq-orchestrator",
+      "entrypoint": "OpsMonitorOps"
+    },
+    {
+      "binding": "ORCHESTRATOR_HEALTH_CHECK",
+      "service": "vibehq-orchestrator",
+      "entrypoint": "Health"
+    },
+    {
+      "binding": "ORCHESTRATOR_TEMPLATE",
+      "service": "vibehq-orchestrator",
+      "entrypoint": "TemplateOps"
+    },
+    {
+      "binding": "ORCHESTRATOR_HIL",
+      "service": "vibehq-orchestrator",
+      "entrypoint": "HilOps"
+    },
+    {
+      "binding": "ORCHESTRATOR_DATA",
+      "service": "vibehq-orchestrator",
+      "entrypoint": "DataOps"
+    },
+    {
+      "binding": "ORCHESTRATOR_PROJECTS",
+      "service": "vibehq-orchestrator",
+      "entrypoint": "ProjectsOps"
+    },
+    {
+      "binding": "ORCHESTRATOR_CHATS",
+      "service": "vibehq-orchestrator",
+      "entrypoint": "ChatsOps"
+    },
+    {
+      "binding": "ORCHESTRATOR_HEALTH",
+      "service": "vibehq-orchestrator",
+      "entrypoint": "HealthOps"
+    },
+    {
+      "binding": "ORCHESTRATOR_PATCH",
+      "service": "vibehq-orchestrator",
+      "entrypoint": "PatchOps"
+    },
+    {
+      "binding": "ORCHESTRATOR_AI_PROVIDER",
+      "service": "vibehq-orchestrator",
+      "entrypoint": "AIProviderOps"
+    },
+    {
+      "binding": "ORCHESTRATOR_DOCS",
+      "service": "vibehq-orchestrator",
+      "entrypoint": "DocsOps"
+    },
+    {
+      "binding": "ORCHESTRATOR_CONTAINER_MONITORING",
+      "service": "vibehq-orchestrator",
+      "entrypoint": "ContainerMonitoringOps"
+    }
+  ],
+  
+  // Common environment variables
+  "vars": {
+    "ENVIRONMENT": "production",
+    "LOG_LEVEL": "info"
+  },
+  
+  // Common AI binding (lightweight, available to all workers)
+  "ai": {
+    "binding": "AI"
+  },
+  
+  // Version metadata binding
+  "version_metadata": {
+    "binding": "CF_VERSION_METADATA"
+  },
+  
+  // Development settings (port will be overridden per worker)
+  "dev": {
+    "local_protocol": "http"
+  },
+  
+  // Enable workers.dev subdomain for easy access
+  "workers_dev": true,
+  "preview_urls": true
+}

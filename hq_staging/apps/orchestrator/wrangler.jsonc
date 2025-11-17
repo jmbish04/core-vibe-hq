@@ -1,0 +1,198 @@
+/**
+ * Orchestrator Worker Configuration
+ * 
+ * Independent configuration for the orchestrator worker.
+ * The orchestrator is the only worker with direct access to D1, KV, R2, etc.
+ * All apps/ workers communicate with the orchestrator via service bindings.
+ * 
+ * For more details on configuration options, refer to:
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	// Orchestrator-specific settings
+	"name": "vibehq-orchestrator",
+	"main": "worker/index.ts",
+	// Compatibility settings
+	"compatibility_date": "2025-11-03",
+	"compatibility_flags": [
+		"nodejs_compat_v2"
+	],
+	// Observability settings
+	"observability": {
+		"enabled": true,
+		"head_sampling_rate": 1.0
+	},
+	// Source maps for better debugging
+	"upload_source_maps": true,
+	// AI binding (available to orchestrator)
+	"ai": {
+		"binding": "AI"
+	},
+	// Version metadata binding
+	"version_metadata": {
+		"binding": "CF_VERSION_METADATA"
+	},
+	// Development settings
+	"dev": {
+		"local_protocol": "http"
+	},
+	// Enable workers.dev subdomain for easy access
+	"workers_dev": true,
+	"preview_urls": true,
+	// Assets configuration for serving UI
+	"assets": {
+		"directory": "dist",
+		"not_found_handling": "single-page-application",
+		"run_worker_first": true,
+		"binding": "ASSETS"
+	},
+	// Service bindings to specialist Workers
+	"services": [
+		{
+			"binding": "CONFLICT_SPECIALIST",
+			"service": "ops-conflict-specialist"
+		},
+		{
+			"binding": "DELIVERY_REPORT_SPECIALIST",
+			"service": "ops-delivery-report-specialist"
+		}
+	],
+	// Container configuration for sandbox services
+	"containers": [
+		{
+			"class_name": "UserAppSandboxService",
+			"image": "registry.cloudflare.com/vibesdk-production-userappsandboxservice:cfe197fc",
+			"max_instances": 1400,
+			"instance_type": {
+				"vcpu": 4,
+				"memory_mib": 8192,
+				"disk_mb": 10240
+			},
+			"rollout_step_percentage": 100
+		}
+	],
+	// Database configuration
+	// Multiple D1 databases are used to separate high-volume data and optimize performance
+	"d1_databases": [
+		{
+			// DB_OPS: Operations database for factories, agents, and operational data
+			// Stores: templates, rules, operational logs, factory/agent metadata
+			// References: project_id (foreign key to DB_PROJECTS)
+			// Rationale: Separated from projects DB to isolate operational concerns
+			// Volume: Moderate - templates and rules are relatively static, logs may grow
+			"binding": "DB_OPS",
+			"database_name": "vibehq-ops",
+			"database_id": "3e7257b6-1665-4c4f-be5a-2f10b191cc56",
+			"remote": true
+		},    
+		{
+			// DB_PROJECTS: Core project and development lifecycle data
+			// Stores: projects, PRDs, requirements, tasks, project metadata
+			// Volume: Moderate - core project data with frequent reads/writes
+			// Note: Kept separate from chats and ops to optimize query performance
+			"binding": "DB_PROJECTS",
+			"database_name": "vibehq-projects",
+			"database_id": "a9d98c63-3be1-4816-99f3-eb9b9b2f0195",
+			"remote": true
+		},
+		{
+			// DB_CHATS: Chat conversations and agent interactions
+			// Stores: chat messages, agent thoughts, agent artifacts, conversation history
+			// References: project_id (foreign key to DB_PROJECTS)
+			// Volume: High - stores every message, thought, and artifact from user-agent interactions
+			// Rationale: Separated due to expected high volume; could potentially merge with DB_PROJECTS
+			// if volume concerns are manageable, but keeping separate allows independent scaling
+			"binding": "DB_CHATS",
+			"database_name": "vibehq-chat-logs",
+			"database_id": "2b860721-2d45-468a-bd3f-81ce1b2a36f8",
+			"remote": true
+		},
+		{
+			// DB_HEALTH: Health check results and worker monitoring data
+			// Stores: webhook health results from all generated workers, health check logs
+			// Volume: High - especially when health checks fail and include full worker logs
+			// Rationale: Separated to isolate high-volume monitoring data from operational queries
+			// This database can grow significantly during incidents when detailed logs are captured
+			"binding": "DB_HEALTH",
+			"database_name": "vibehq-health-logs",
+			"database_id": "48beeedd-f95f-4e7f-a519-e95d6823ae11",
+			"remote": true
+		}
+	],
+	// Durable Objects
+	"durable_objects": {
+		"bindings": [
+			{
+				"class_name": "CodeGeneratorAgent",
+				"name": "CodeGenObject"
+			},
+			{
+				"class_name": "UserAppSandboxService",
+				"name": "Sandbox"
+			},
+			{
+				"class_name": "DORateLimitStore",
+				"name": "DORateLimitStore"
+			}
+		]
+	},
+	// R2 storage
+	"r2_buckets": [
+		{
+			"binding": "TEMPLATES_BUCKET",
+			"bucket_name": "vibesdk-templates"
+		}
+	],
+	// KV storage
+	"kv_namespaces": [
+		{
+			"binding": "VibecoderStore",
+			"id": "f066f3c2e4824981b48e8586c04db9c1"
+		}
+	],
+	// Durable Object migrations
+	"migrations": [
+		{
+			"new_sqlite_classes": [
+				"CodeGeneratorAgent",
+				"UserAppSandboxService"
+			],
+			"tag": "v1"
+		},
+		{
+			"new_sqlite_classes": [
+				"DORateLimitStore"
+			],
+			"tag": "v2"
+		}
+	],
+	// Custom domain routes
+	"routes": [
+		{
+			"pattern": "vibes.hacolby.app",
+			"custom_domain": true
+		}
+	],
+	// Environment variables
+	"vars": {
+		// Common environment variables
+		"ENVIRONMENT": "production",
+		"LOG_LEVEL": "info",
+		// Orchestrator-specific environment variables
+		"TEMPLATES_REPOSITORY": "https://github.com/cloudflare/vibesdk-templates",
+		"ALLOWED_EMAIL": "",
+		"DISPATCH_NAMESPACE": "vibesdk-default-namespace",
+		"ENABLE_READ_REPLICAS": "true",
+		"CLOUDFLARE_AI_GATEWAY": "vibesdk-gateway",
+		"CUSTOM_DOMAIN": "",
+		"MAX_SANDBOX_INSTANCES": "10",
+		"SANDBOX_INSTANCE_TYPE": "standard-3",
+		"USE_CLOUDFLARE_IMAGES": "",
+		"GITHUB_OWNER": "your-org",
+		"GITHUB_REPO": "core-vibe-hq",
+		"GITHUB_API_KEY": "",
+		"CORE_GITHUB_API": "https://api.github.com",
+		"CORE_GITHUB_API_URL": "https://core-github-api.hacolby.workers.dev"
+	}
+}

@@ -1,0 +1,4 @@
+
+.heading {
+  @apply text-3xl font-bold underline;
+}

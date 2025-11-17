@@ -1,0 +1,19 @@
+{
+  "author": "",
+  "dependencies": {
+    "cronstrue": "^3.9.0",
+    "nanoid": "^5.1.6"
+  },
+  "description": "",
+  "keywords": [],
+  "license": "ISC",
+  "name": "@cloudflare/agents-playground",
+  "private": true,
+  "scripts": {
+    "deploy": "vite build && wrangler deploy",
+    "types": "wrangler types env.d.ts --include-runtime false",
+    "start": "vite dev"
+  },
+  "type": "module",
+  "version": "0.0.0"
+}

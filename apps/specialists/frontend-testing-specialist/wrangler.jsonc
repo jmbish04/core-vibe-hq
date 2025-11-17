@@ -1,0 +1,38 @@
+{
+  "$schema": "../../wrangler.base.jsonc",
+  "name": "ops-frontend-testing-specialist",
+  "main": "worker/index.ts",
+  "compatibility_date": "2025-11-03",
+  "compatibility_flags": ["nodejs_compat"],
+  "browser": {
+    "binding": "BROWSER"
+  },
+  "kv_namespaces": [
+    {
+      "binding": "TEST_CONFIGS",
+      "id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "preview_id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "binding": "TEST_COORDINATOR",
+        "class_name": "TestCoordinator"
+      }
+    ]
+  },
+  "services": [
+    {
+      "binding": "ORCHESTRATOR",
+      "service": "vibehq-orchestrator"
+    }
+  ],
+  "vars": {
+    "TEST_ENVIRONMENT": "cloudflare",
+    "TEST_BASE_URL": "https://your-app.workers.dev",
+    "CLOUDFLARE_ACCOUNT_ID": "",
+    "CLOUDFLARE_API_TOKEN": "",
+    "PLAYWRIGHT_PROJECT": "frontend-tests"
+  }
+}

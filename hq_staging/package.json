@@ -1,0 +1,13 @@
+{
+  "name": "hq-monorepo",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "apps/factories/*",
+    "apps/specialists/*",
+    "@shared"
+  ],
+  "scripts": {
+    "dev": "echo \"Run dev script from within a specific app\""
+  }
+}

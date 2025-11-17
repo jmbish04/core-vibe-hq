@@ -1,0 +1,38 @@
+{
+  "name": "unit-test-specialist",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "pnpm run check:lint && pnpm run check:prettier && pnpm run test:unit",
+    "check:lint": "pnpm run lint",
+    "check:prettier": "prettier . --check",
+    "fix": "pnpm run fix:lint && pnpm run fix:prettier",
+    "fix:lint": "pnpm run lint -- --fix",
+    "fix:prettier": "prettier . --write",
+    "lint": "templates lint .",
+    "test": "pnpm run test:unit && pnpm run test:e2e",
+    "test:unit": "vitest --run",
+    "test:e2e": "playwright test",
+    "test:e2e:live": "PLAYWRIGHT_USE_LIVE=true playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:cloudflare": "wrangler deploy --dry-run --var PLAYWRIGHT_RUN_ON_FETCH:true",
+    "postinstall": "pnpm exec playwright install --with-deps"
+  },
+  "dependencies": {
+    "hono": "^4.3.8"
+  },
+  "devDependencies": {
+    "@cloudflare/playwright": "^0.1.0",
+    "@playwright/test": "1.53.1",
+    "@types/node": "24.0.4",
+    "prettier": "3.6.2",
+    "templates": "workspace:*",
+    "typescript": "5.5.4",
+    "vitest": "3.2.4"
+  },
+  "engines": {
+    "node": ">=20.16.0 || >=22.3.0"
+  },
+  "packageManager": "pnpm@10.2.0"
+}

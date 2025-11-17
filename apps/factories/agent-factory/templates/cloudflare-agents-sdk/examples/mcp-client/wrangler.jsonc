@@ -1,0 +1,35 @@
+{
+  "name": "mcp-client",
+  "main": "src/server.ts",
+  "compatibility_date": "2025-03-14",
+  "compatibility_flags": ["nodejs_compat"],
+
+  "assets": {
+    "not_found_handling": "single-page-application"
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "class_name": "MyAgent",
+        "name": "MyAgent"
+      }
+    ]
+  },
+
+  "migrations": [
+    {
+      "new_sqlite_classes": ["MyAgent"],
+      "tag": "v1"
+    }
+  ],
+
+  "observability": {
+    "logs": {
+      "enabled": true
+    }
+  }
+  // Optional: Override the auto-detected host
+  // "vars": {
+  //   "HOST": "<DEPLOYED_HOSTNAME>"
+  // }
+}

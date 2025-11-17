@@ -1,0 +1,20 @@
+{
+	"$schema": "../../node_modules/wrangler/config-schema.json",
+	"name": "routing",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-01-29",
+	"compatibility_flags": ["nodejs_compat"],
+	"observability": {
+		"enabled": true
+	},
+	"ai": {
+		"binding": "AI"
+	},
+	"workflows": [
+		{
+			"name": "routing-workflow",
+			"binding": "ROUTING_WORKFLOW",
+			"class_name": "RoutingWorkflow"
+		}
+	]
+}

@@ -1,0 +1,120 @@
+---
+description: Database RPC pattern - All database operations must go through orchestrator RPC endpoints
+globs: **/*.ts, **/*.tsx
+alwaysApply: true
+---
+
+# Database RPC Pattern - CRITICAL
+
+## Architecture Rule
+
+**ONLY the orchestrator worker has direct access to D1 databases. All apps/ workers MUST use orchestrator RPC endpoints for ALL database operations.**
+
+## Database Structure
+
+The orchestrator manages **4 separate D1 databases**, each with its own RPC entrypoint:
+
+1. **DB_OPS** → `DataOps` entrypoint → `ORCHESTRATOR_DATA` binding
+2. **DB_PROJECTS** → `ProjectsOps` entrypoint → `ORCHESTRATOR_PROJECTS` binding
+3. **DB_CHATS** → `ChatsOps` entrypoint → `ORCHESTRATOR_CHATS` binding
+4. **DB_HEALTH** → `HealthOps` entrypoint → `ORCHESTRATOR_HEALTH` binding
+
+## Adding New Database Operations
+
+### ⚠️ CRITICAL PROCESS ORDER
+
+When adding new database operations, you **MUST** follow this exact order:
+
+#### 1. Add RPC Method to Orchestrator Entrypoint FIRST
+
+**Location**: `orchestrator/worker/entrypoints/[Database]Ops.ts`
+
+- Identify the correct entrypoint based on database:
+  - `DB_OPS` → `DataOps.ts`
+  - `DB_PROJECTS` → `ProjectsOps.ts`
+  - `DB_CHATS` → `ChatsOps.ts`
+  - `DB_HEALTH` → `HealthOps.ts`
+
+- Add the RPC method:
+```typescript
+async yourNewMethod(params: {
+    // Define parameters
+}): Promise<YourReturnType> {
+    // Use this.dbService.[ops|projects|chats|health]
+    const result = await this.dbService.ops
+        .select()
+        .from(schema.yourTable)
+        .where(eq(schema.yourTable.id, params.id));
+    
+    return result;
+}
+```
+
+#### 2. Update Base Worker Client Types SECOND
+
+**Location**: `apps/base/worker/database/database.ts`
+
+- Update the appropriate client type:
+```typescript
+type DataOpsClient = {
+    // ... existing methods
+    yourNewMethod: (params: { /* params */ }) => Promise<YourReturnType>;
+};
+```
+
+- Also update for other databases if needed:
+  - `ProjectsOpsClient` (for DB_PROJECTS)
+  - `ChatsOpsClient` (for DB_CHATS)
+  - `HealthOpsClient` (for DB_HEALTH)
+
+#### 3. Update Data Factory Client Types THIRD
+
+**Location**: `apps/factories/data-factory/worker/database/database.ts`
+
+- Update the same client types as in step 2
+
+#### 4. Use in Services LAST
+
+**Location**: Any service file in apps/ workers
+
+```typescript
+// Access via RPC client
+const result = await this.db.dataOpsClient.yourNewMethod({
+    // params
+});
+```
+
+## What NOT to Do
+
+- ❌ **NEVER** add `d1_databases` bindings to apps/ workers
+- ❌ **NEVER** use `env.DB`, `env.DB_OPS`, etc. directly in apps/ workers
+- ❌ **NEVER** add RPC methods to base workers before orchestrator
+- ❌ **NEVER** skip updating client types after adding orchestrator methods
+- ❌ **NEVER** use direct Drizzle queries in apps/ workers
+
+## What to Do
+
+- ✅ **ALWAYS** add RPC methods to orchestrator entrypoints first
+- ✅ **ALWAYS** update client types in base workers after orchestrator changes
+- ✅ **ALWAYS** use service bindings (`ORCHESTRATOR_*`) for database access
+- ✅ **ALWAYS** follow the process order: Orchestrator → Base → Data Factory → Services
+- ✅ **ALWAYS** check `@shared/base/AGENTS.md` for detailed guidance
+
+## Service Bindings
+
+All service bindings are defined in `@shared/base/wrangler.base.jsonc`:
+
+- `ORCHESTRATOR_DATA` → DataOps (DB_OPS)
+- `ORCHESTRATOR_PROJECTS` → ProjectsOps (DB_PROJECTS)
+- `ORCHESTRATOR_CHATS` → ChatsOps (DB_CHATS)
+- `ORCHESTRATOR_HEALTH` → HealthOps (DB_HEALTH)
+
+These are automatically available to all workers extending the base config.
+
+## Reference
+
+- **Detailed Guide**: `@shared/base/AGENTS.md`
+- **Orchestrator Entrypoints**: `orchestrator/worker/entrypoints/`
+- **Base Config**: `@shared/base/wrangler.base.jsonc`
+- **Base Database Service**: `apps/base/worker/database/database.ts`
+- **Data Factory Database Service**: `apps/factories/data-factory/worker/database/database.ts`

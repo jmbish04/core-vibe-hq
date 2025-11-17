@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VibeSDK Architecture: Worker vs. Container</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .flow-arrow {
+            position: relative;
+            font-size: 2.5rem;
+            color: #9ca3af; /* gray-400 */
+            margin: 0.5rem 0;
+            text-align: center;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 p-4 md:p-8">
+    <div class="max-w-6xl mx-auto">
+        
+        <h1 class="text-3xl md:text-4xl font-bold text-center text-gray-800 mb-4">
+            Architecture: Worker vs. Container
+        </h1>
+        <p class="text-lg text-center text-gray-600 mb-12 max-w-3xl mx-auto">
+            This architecture separates "thinking" from "doing." The **Worker** is the lightweight manager (the brain), while the **Container** is the heavy-lifting, isolated environment (the hands).
+        </p>
+
+        <!-- Main Columns -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16">
+            
+            <!-- Column 1: The Worker (Brain) -->
+            <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
+                <div class="flex items-center space-x-4 mb-5">
+                    <div class="bg-blue-100 text-blue-600 p-3 rounded-full">
+                        <!-- Brain Icon -->
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-brain"><path d="M12 5a3 3 0 1 0-5.997.142A5 5 0 0 0 8 15a5 5 0 0 0 1.47 3.5M12 5a3 3 0 1 1 5.997.142A5 5 0 0 1 16 15a5 5 0 0 1-1.47 3.5"/><path d="M12 7.5c-1.75 0-3.25 1-4 2.5c-1.75 0-3.25 1-4 2.5C4 12 4 10.5 4 8.5c0-2.67 2.94-5 6-5c.56 0 1.08.09 1.58.26"/><path d="M12 7.5c1.75 0 3.25 1 4 2.5c1.75 0 3.25 1 4 2.5c-1 0-1-1.5-1-3.5c0-2.67-2.94-5-6-5c-.56 0-1.08.09-1.58.26"/><path d="M12 15a3.5 3.5 0 0 0-3.5 3.5c0 1.25.46 2.5 1.47 3.5"/><path d="M12 15a3.5 3.5 0 0 1 3.5 3.5c0 1.25-.46 2.5-1.47 3.5"/></svg>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-blue-700">The Cloudflare Worker</h2>
+                        <p class="text-xl font-semibold text-gray-700">"The Brain" 🧠 (Orchestrator)</p>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <p class="text-gray-600">The worker manages the entire process. It's smart, fast, and stateless, but it doesn't get its "hands dirty."</p>
+                    <h3 class="text-lg font-semibold text-gray-800 pt-2 border-t border-gray-100">Key Responsibilities:</h3>
+                    
+                    <ul class="space-y-3">
+                        <li class="flex items-start space-x-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-inbox flex-shrink-0 text-blue-500 mt-1"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11zM16 12l-4 4-4-4"/></svg>
+                            <div><strong class="text-gray-900">Receives User Requests:</strong> Handles API calls and WebSocket connections from the user.</div>
+                        </li>
+                        <li class="flex items-start space-x-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sparkles flex-shrink-0 text-blue-500 mt-1"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>
+                            <div><strong class="text-gray-900">Calls LLMs for Planning:</strong> Asks the AI, "What steps should I take to fix this bug?"</div>
+                        </li>
+                        <li class="flex items-start space-x-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-binary flex-shrink-0 text-blue-500 mt-1"><path d="M6 10h.01"/><path d="M6 14h.01"/><path d="M10 10h.01"/><path d="M10 14h.01"/><path d="M14 10h.01"/><path d="M14 14h.01"/><path d="M18 10h.01"/><path d="M18 14h.01"/><rect width="20" height="12" x="2" y="6" rx="2"/></svg>
+                            <div><strong class="text-gray-900">Manages State:</strong> Keeps track of the conversation, file state, and overall plan.</div>
+                        </li>
+                        <li class="flex items-start space-x-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-send flex-shrink-0 text-blue-500 mt-1"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                            <div><strong class="text-gray-900">Delegates Tasks:</strong> Sends specific commands (like `run_analysis`) to the Container.</div>
+                        </li>
+                        <li class="flex items-start space-x-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-search flex-shrink-0 text-blue-500 mt-1"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                            <div><strong class="text-gray-900">Analyzes Results:</strong> Receives output from the Container (e.g., "Lint failed") and decides the next step.</div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Column 2: The Container (Hands) -->
+            <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
+                <div class="flex items-center space-x-4 mb-5">
+                    <div class="bg-green-100 text-green-600 p-3 rounded-full">
+                        <!-- Hands Icon -->
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-hand-metal"><path d="M18 12.5V10a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v1.5"/><path d="M14 11V9a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"/><path d="M10 10.5V9a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v1.5"/><path d="M7 15V9a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v6.5a3.5 3.5 0 0 0 3.5 3.5h1.1a3.5 3.5 0 0 1 3.4 3V22"/><path d="M11 15.5V9a2 2 0 0 1 2-2v0a2 2 0 0 1 2 2v6.5a3.5 3.5 0 0 1-3.5 3.5h-1.1A3.5 3.5 0 0 0 8 19v-1.5"/></svg>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-green-700">The Sandbox Container</h2>
+                        <p class="text-xl font-semibold text-gray-700">"The Hands" 👐 (Executor)</p>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <p class="text-gray-600">The container is a secure, isolated environment with a full file system and shell. It only does exactly what the Worker tells it to do.</p>
+                    <h3 class="text-lg font-semibold text-gray-800 pt-2 border-t border-gray-100">Key Responsibilities:</h3>
+                    
+                    <ul class="space-y-3">
+                        <li class="flex items-start space-x-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-terminal flex-shrink-0 text-green-500 mt-1"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>
+                            <div><strong class="text-gray-900">Executes Shell Commands:</strong> Runs `exec_commands` (like `bun add lodash`, `rm -rf old_file.txt`).</div>
+                        </li>
+                        <li class="flex items-start space-x-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check-circle flex-shrink-0 text-green-500 mt-1"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                            <div><strong class="text-gray-900">Runs Code Analysis:</strong> Runs `run_analysis` (linting, type-checking) on the code.</div>
+                        </li>
+                        <li class="flex items-start space-x-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-plus flex-shrink-0 text-green-500 mt-1"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="12" x2="12" y1="18" y2="12"/><line x1="9" x2="15" y1="15" y2="15"/></svg>
+                            <div><strong class="text-gray-900">Manipulates Files:</strong> Actually writes, deletes, and modifies files on its virtual file system.</div>
+                        </li>
+                        <li class="flex items-start space-x-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-left-circle flex-shrink-0 text-green-500 mt-1"><circle cx="12" cy="12" r="10"/><path d="M16 12H8"/><path d="m12 8-4 4 4 4"/></svg>
+                            <div><strong class="text-gray-900">Reports Results Back:</strong> Sends STDOUT, STDERR, and exit codes back to the Worker.</div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Flow Diagram -->
+        <div class="bg-white p-6 md:p-8 rounded-2xl shadow-lg border border-gray-200">
+            <h2 class="text-2xl font-bold text-center text-gray-800 mb-8">Example Flow: "Fix this bug"</h2>
+            
+            <div class="space-y-4">
+                <!-- Step 1: User -->
+                <div class="flex items-center space-x-4">
+                    <div class="bg-purple-100 text-purple-600 p-3 rounded-full">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    </div>
+                    <div class="flex-1 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <strong class="text-purple-700">1. User:</strong> "I'm getting an error 'cannot find module lodash'. Please fix it."
+                    </div>
+                </div>
+                
+                <div class="flow-arrow">↓</div>
+
+                <!-- Step 2: Worker (Brain) -->
+                <div class="flex items-center space-x-4">
+                    <div class="bg-blue-100 text-blue-600 p-3 rounded-full">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-brain"><path d="M12 5a3 3 0 1 0-5.997.142A5 5 0 0 0 8 15a5 5 0 0 0 1.47 3.5M12 5a3 3 0 1 1 5.997.142A5 5 0 0 1 16 15a5 5 0 0 1-1.47 3.5"/><path d="M12 7.5c-1.75 0-3.25 1-4 2.5c-1.75 0-3.25 1-4 2.5C4 12 4 10.5 4 8.5c0-2.67 2.94-5 6-5c.56 0 1.08.09 1.58.26"/><path d="M12 7.5c1.75 0 3.25 1 4 2.5c1.75 0 3.25 1 4 2.5c-1 0-1-1.5-1-3.5c0-2.67-2.94-5-6-5c-.56 0-1.08.09-1.58.26"/><path d="M12 15a3.5 3.5 0 0 0-3.5 3.5c0 1.25.46 2.5 1.47 3.5"/><path d="M12 15a3.5 3.5 0 0 1 3.5 3.5c0 1.25-.46 2.5-1.47 3.5"/></svg>
+                    </div>
+                    <div class="flex-1 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <strong class="text-blue-700">2. Worker (Brain):</strong> "Okay, the user is missing a package. I need to install it."<br>
+                        <span class="text-sm font-medium text-gray-600">Action:</span> <code class="bg-blue-100 text-blue-800 px-1 py-0.5 rounded">exec_commands(['bun add lodash'])</code>
+                    </div>
+                </div>
+
+                <div class="flow-arrow">↓</div>
+
+                <!-- Step 3: Container (Hands) -->
+                <div class="flex items-center space-x-4">
+                    <div class="bg-green-100 text-green-600 p-3 rounded-full">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-hand-metal"><path d="M18 12.5V10a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v1.5"/><path d="M14 11V9a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"/><path d="M10 10.5V9a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v1.5"/><path d="M7 15V9a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v6.5a3.5 3.5 0 0 0 3.5 3.5h1.1a3.5 3.5 0 0 1 3.4 3V22"/><path d="M11 15.5V9a2 2 0 0 1 2-2v0a2 2 0 0 1 2 2v6.5a3.5 3.5 0 0 1-3.5 3.5h-1.1A3.5 3.5 0 0 0 8 19v-1.5"/></svg>
+                    </div>
+                    <div class="flex-1 p-4 bg-green-50 rounded-lg border border-green-200">
+                        <strong class="text-green-700">3. Sandbox (Hands):</strong> Runs the command `bun add lodash` in its terminal.
+                        <br>
+                        <span class="text-sm font-medium text-gray-600">Result:</span> <code class="bg-green-100 text-green-800 px-1 py-0.5 rounded">"stdout: ... installed lodash ...", "exit_code: 0"</code>
+                    </div>
+                </div>
+
+                <div class="flow-arrow">↓</div>
+
+                <!-- Step 4: Worker (Brain) -->
+                <div class="flex items-center space-x-4">
+                    <div class="bg-blue-100 text-blue-600 p-3 rounded-full">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-brain"><path d="M12 5a3 3 0 1 0-5.997.142A5 5 0 0 0 8 15a5 5 0 0 0 1.47 3.5M12 5a3 3 0 1 1 5.997.142A5 5 0 0 1 16 15a5 5 0 0 1-1.47 3.5"/><path d="M12 7.5c-1.75 0-3.25 1-4 2.5c-1.75 0-3.25 1-4 2.5C4 12 4 10.5 4 8.5c0-2.67 2.94-5 6-5c.56 0 1.08.09 1.58.26"/><path d="M12 7.5c1.75 0 3.25 1 4 2.5c1.75 0 3.25 1 4 2.5c-1 0-1-1.5-1-3.5c0-2.67-2.94-5-6-5c-.56 0-1.08.09-1.58.26"/><path d="M12 15a3.5 3.5 0 0 0-3.5 3.5c0 1.25.46 2.5 1.47 3.5"/><path d="M12 15a3.5 3.5 0 0 1 3.5 3.5c0 1.25-.46 2.5-1.47 3.5"/></svg>
+                    </div>
+                    <div class="flex-1 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <strong class="text-blue-700">4. Worker (Brain):</strong> "Great, the install was successful. Now I'll run analysis just to be safe."
+                        <br>
+                        <span class="text-sm font-medium text-gray-600">Action:</span> <code class="bg-blue-100 text-blue-800 px-1 py-0.5 rounded">run_analysis()</code>
+                    </div>
+                </div>
+
+                <div class="flow-arrow">↓</div>
+
+                <!-- Step 5: Container (Hands) -->
+                 <div class="flex items-center space-x-4">
+                    <div class="bg-green-100 text-green-600 p-3 rounded-full">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-hand-metal"><path d="M18 12.5V10a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v1.5"/><path d="M14 11V9a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"/><path d="M10 10.5V9a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v1.5"/><path d="M7 15V9a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v6.5a3.5 3.5 0 0 0 3.5 3.5h1.1a3.5 3.5 0 0 1 3.4 3V22"/><path d="M11 15.5V9a2 2 0 0 1 2-2v0a2 2 0 0 1 2 2v6.5a3.5 3.5 0 0 1-3.5 3.5h-1.1A3.5 3.5 0 0 0 8 19v-1.5"/></svg>
+                    </div>
+                    <div class="flex-1 p-4 bg-green-50 rounded-lg border border-green-200">
+                        <strong class="text-green-700">5. Sandbox (Hands):</strong> Runs `bun run lint` and `bun run tsc`.
+                        <br>
+                        <span class="text-sm font-medium text-gray-600">Result:</span> <code class="bg-green-100 text-green-800 px-1 py-0.5 rounded">"issues: []"</code>
+                    </div>
+                </div>
+
+                 <div class="flow-arrow">↓</div>
+
+                <!-- Step 6: Worker (Brain) -->
+                <div class="flex items-center space-x-4">
+                    <div class="bg-blue-100 text-blue-600 p-3 rounded-full">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-brain"><path d="M12 5a3 3 0 1 0-5.997.142A5 5 0 0 0 8 15a5 5 0 0 0 1.47 3.5M12 5a3 3 0 1 1 5.997.142A5 5 0 0 1 16 15a5 5 0 0 1-1.47 3.5"/><path d="M12 7.5c-1.75 0-3.25 1-4 2.5c-1.75 0-3.25 1-4 2.5C4 12 4 10.5 4 8.5c0-2.67 2.94-5 6-5c.56 0 1.08.09 1.58.26"/><path d="M12 7.5c1.75 0 3.25 1 4 2.5c1.75 0 3.25 1 4 2.5c-1 0-1-1.5-1-3.5c0-2.67-2.94-5-6-5c-.56 0-1.08.09-1.58.26"/><path d="M12 15a3.5 3.5 0 0 0-3.5 3.5c0 1.25.46 2.5 1.47 3.5"/><path d="M12 15a3.5 3.5 0 0 1 3.5 3.5c0 1.25-.46 2.5-1.47 3.5"/></svg>
+                    </div>
+                    <div class="flex-1 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <strong class="text-blue-700">6. Worker (Brain):</strong> "Install complete, no new issues. The bug should be fixed."<br>
+                        <span class="text-sm font-medium text-gray-600">Action:</span> Sends message to user.
+                    </div>
+                </div>
+
+                <div class="flow-arrow">↓</div>
+
+                <!-- Step 7: User -->
+                <div class="flex items-center space-x-4">
+                    <div class="bg-purple-100 text-purple-600 p-3 rounded-full">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    </div>
+                    <div class="flex-1 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <strong class="text-purple-700">7. User:</strong> Receives message: "I've installed the `lodash` package. Let me know if you still see the error!"
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>

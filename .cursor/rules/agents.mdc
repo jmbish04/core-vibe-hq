@@ -1,0 +1,549 @@
+# Agents Development Rules
+
+---
+description: Rules and patterns for developing AI agents in the core-vibe-hq codebase
+globs: apps/factories/*/worker/agents/*.ts, apps/specialists/*/worker/agent/*.ts, @shared/base/agents/*.ts
+alwaysApply: true
+---
+
+## Agent Architecture Rules
+
+### 1. Extend Appropriate Base Classes
+
+**✅ DO:** Use `BaseFactoryAgent` for factory agents, `BaseAgent` for specialized agents
+
+```typescript
+// For factory agents (recommended)
+export class MyFactoryAgent extends BaseFactoryAgent {
+  getFactoryType(): string {
+    return 'my-factory-type';
+  }
+}
+
+// For specialized agents
+export class MySpecialist extends BaseAgent {
+  // Implementation
+}
+```
+
+**❌ DON'T:** Create agents from scratch or extend Cloudflare Agent SDK directly
+
+```typescript
+// WRONG - doesn't inherit shared functionality
+export class MyAgent extends Agent {
+  // Missing logging, error handling, prompt system, etc.
+}
+```
+
+### 2. Use Centralized Prompt System
+
+**✅ DO:** Use `buildAIPrompt()` method for consistent AI behavior
+
+```typescript
+const prompt = this.buildAIPrompt(
+  'cloudflare-base',           // Always include base
+  ['orm-policy', 'security-policy'], // Domain policies
+  { projectName: this.context.projectId }, // Context
+  ['Custom task instructions'] // Specific guidance
+);
+```
+
+**✅ DO:** Use the swarm helpers for PM/UX/SWE/SDET collaboration flows
+
+```typescript
+import { composeFactorySwarmPrompt } from 'apps/base/worker/agents/swarmPrompts';
+
+const specPrompt = composeFactorySwarmPrompt(
+  'agent-factory',
+  { projectName: this.context.projectId },
+  ['Surface open questions before drafting phases.']
+).content;
+```
+
+**❌ DON'T:** Hardcode prompts or use AI directly without prompt system
+
+```typescript
+// WRONG - hardcoded, not maintainable
+const prompt = `You are an AI assistant... ${longString}`;
+const response = await this.env.AI.run('model', { messages: [{ role: 'user', content: prompt }] });
+```
+
+### 3. Implement Required Methods
+
+**✅ DO:** Implement all required abstract methods
+
+```typescript
+export class MyAgent extends BaseFactoryAgent {
+  // Required for factory agents
+  getFactoryType(): string {
+    return 'my-factory-type';
+  }
+
+  // Required for all agents
+  async onRequest(request: Request): Promise<Response> {
+    // Handle HTTP requests
+  }
+
+  // Optional but recommended
+  async onConnect(connection: any): Promise<void> {
+    // Handle WebSocket connections
+  }
+}
+```
+
+### 4. Proper Environment Types
+
+**✅ DO:** Extend `BaseEnv` and define specific bindings
+
+```typescript
+export interface MyAgentEnv extends BaseEnv {
+  // Orchestrator RPC bindings
+  ORCHESTRATOR_DATA: any;
+  ORCHESTRATOR_PROJECTS: any;
+
+  // AI and specialized bindings
+  AI: any;
+  MY_CUSTOM_BINDING?: DurableObject;
+}
+```
+
+**❌ DON'T:** Use generic `any` types or missing environment definitions
+
+```typescript
+// WRONG - no type safety
+interface Env {
+  AI: any;
+  DATABASE: any;
+}
+```
+
+### 5. State Management with Durable Objects
+
+**✅ DO:** Use Durable Object storage for persistence
+
+```typescript
+interface MyState {
+  projectId: string;
+  status: 'idle' | 'processing' | 'complete';
+  data: any[];
+}
+
+export class MyAgent extends BaseAgent {
+  private state: MyState;
+
+  private async loadState(): Promise<void> {
+    const stored = await this.storage.get('agent-state') as MyState;
+    if (stored) this.state = { ...this.state, ...stored };
+  }
+
+  private async saveState(): Promise<void> {
+    await this.storage.put('agent-state', this.state);
+  }
+
+  private async updateState(updates: Partial<MyState>): Promise<void> {
+    this.state = { ...this.state, ...updates };
+    await this.saveState();
+  }
+}
+```
+
+**❌ DON'T:** Store state in memory only or use global variables
+
+```typescript
+// WRONG - state lost on eviction
+private state = { data: [] };
+
+// WRONG - not persistent
+globalState = { data: [] };
+```
+
+## Agent Communication Rules
+
+### 6. Use WebSocket Hibernation API
+
+**✅ DO:** Implement proper WebSocket hibernation
+
+```typescript
+async onConnect(connection: any): Promise<void> {
+  // Send initial state
+  connection.send(JSON.stringify({
+    type: 'status_update',
+    data: { status: this.state.status }
+  }));
+
+  // Store connection reference if needed
+  this.activeConnections.add(connection);
+}
+
+async webSocketMessage(ws: WebSocket, message: string): Promise<void> {
+  // Handle incoming messages
+  const data = JSON.parse(message);
+  // Process message...
+}
+
+async webSocketClose(ws: WebSocket, code: number, reason: string): Promise<void> {
+  // Clean up connection
+  this.activeConnections.delete(ws);
+}
+```
+
+**❌ DON'T:** Use legacy WebSocket API or manual connection management
+
+```typescript
+// WRONG - doesn't support hibernation
+ws.addEventListener('message', handler);
+```
+
+### 7. Structured Logging
+
+**✅ DO:** Use structured logging with context
+
+```typescript
+// Info with context
+this.logger.info('Operation started', {
+  operation: 'code_generation',
+  projectId: this.context.projectId,
+  userId: this.context.userId
+});
+
+// Error with full context
+this.logger.error('Operation failed', {
+  error: error.message,
+  operation: 'code_generation',
+  stack: error.stack,
+  context: this.context
+});
+```
+
+**❌ DON'T:** Use console.log or unstructured logging
+
+```typescript
+// WRONG - not searchable, no context
+console.log('Operation started for project', projectId);
+
+// WRONG - no structure
+this.logger.info(`Error: ${error.message}`);
+```
+
+## Database Access Rules
+
+### 8. Use Orchestrator RPC for Database Access
+
+**✅ DO:** Access databases through orchestrator service bindings
+
+```typescript
+// From apps workers - use RPC
+const users = await this.env.ORCHESTRATOR_DATA.getUsers({
+  projectId: this.context.projectId
+});
+
+// From orchestrator - direct access
+const users = await this.dbService.ops
+  .select()
+  .from(schema.users)
+  .where(eq(schema.users.projectId, projectId));
+```
+
+**❌ DON'T:** Add direct D1 bindings to apps workers
+
+```typescript
+// WRONG - direct database access from apps worker
+const result = await this.env.DB.prepare('SELECT * FROM users').all();
+```
+
+### 9. Follow ORM Policy
+
+**✅ DO:** Use Drizzle + Kysely hybrid ORM
+
+```typescript
+// Drizzle for simple CRUD
+await db.drizzle.insert(schema.users).values({ email }).run();
+const users = await db.drizzle.select().from(schema.users).all();
+
+// Kysely for complex queries
+const results = await db.kysely
+  .selectFrom('users')
+  .where('created_at', '>', cutoff)
+  .orderBy('created_at', 'desc')
+  .execute();
+```
+
+**❌ DON'T:** Use raw SQL or other ORM libraries
+
+```typescript
+// WRONG - raw SQL
+await db.prepare('SELECT * FROM users WHERE email = ?').bind(email).all();
+
+// WRONG - different ORM
+import { PrismaClient } from '@prisma/client';
+```
+
+## Configuration Rules
+
+### 10. Proper Wrangler Configuration
+
+**✅ DO:** Include all required bindings and migrations
+
+```jsonc
+{
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "MY_AGENT",
+        "class_name": "MyAgent"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["MyAgent"]
+    }
+  ],
+  "services": [
+    {
+      "binding": "ORCHESTRATOR",
+      "service": "vibehq-orchestrator"
+    }
+  ]
+}
+```
+
+**❌ DON'T:** Missing bindings or incorrect configuration
+
+```jsonc
+// WRONG - missing migrations
+{
+  "durable_objects": {
+    "bindings": [{
+      "name": "MY_AGENT",
+      "class_name": "MyAgent"
+    }]
+  }
+  // Missing migrations array
+}
+```
+
+## Error Handling Rules
+
+### 11. Consistent Error Responses
+
+**✅ DO:** Return structured error responses
+
+```typescript
+async onRequest(request: Request): Promise<Response> {
+  try {
+    const result = await this.performOperation(request);
+    return new Response(JSON.stringify(result), {
+      headers: { 'Content-Type': 'application/json' }
+    });
+  } catch (error) {
+    await this.logAction('request_failed', 'error', {
+      error: error.message,
+      url: request.url
+    });
+
+    return new Response(JSON.stringify({
+      error: 'Operation failed',
+      code: 'OPERATION_FAILED',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
+```
+
+**❌ DON'T:** Return inconsistent or unhelpful errors
+
+```typescript
+// WRONG - no error handling
+const result = await this.performOperation(request);
+return new Response(JSON.stringify(result));
+
+// WRONG - generic error
+catch (error) {
+  return new Response('Error', { status: 500 });
+}
+```
+
+## Testing Rules
+
+### 12. Comprehensive Agent Testing
+
+**✅ DO:** Test agents with proper mocking
+
+```typescript
+describe('MyAgent', () => {
+  let agent: MyAgent;
+  let mockEnv: MyAgentEnv;
+
+  beforeEach(() => {
+    mockEnv = {
+      AI: { run: vi.fn() },
+      ORCHESTRATOR_DATA: { getUsers: vi.fn() }
+    };
+    agent = new MyAgent(mockEnv, mockLogger);
+  });
+
+  it('should handle requests correctly', async () => {
+    const request = new Request('http://example.com/test');
+    const response = await agent.onRequest(request);
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ success: true });
+  });
+
+  it('should use proper prompts', async () => {
+    const spy = vi.spyOn(agent as any, 'buildAIPrompt');
+
+    await agent.generateCode('requirements');
+
+    expect(spy).toHaveBeenCalledWith(
+      'cloudflare-base',
+      expect.any(Array),
+      expect.any(Object),
+      expect.any(Array)
+    );
+  });
+});
+```
+
+## Best Practices
+
+### 13. Agent Design Principles
+
+**✅ DO:** Follow single responsibility principle
+
+```typescript
+// GOOD - focused agent
+export class UserManagementAgent extends BaseFactoryAgent {
+  // Only handles user operations
+}
+
+// GOOD - composition over inheritance
+export class ComplexAgent extends BaseAgent {
+  constructor(env: Env, logger: Logger, context: Context) {
+    super(env, logger, context);
+    this.userManager = new UserManager(env);
+    this.dataProcessor = new DataProcessor(env);
+  }
+}
+```
+
+**❌ DON'T:** Create monolithic agents
+
+```typescript
+// BAD - too many responsibilities
+export class GodAgent extends BaseAgent {
+  // Handles users, payments, analytics, deployment...
+}
+```
+
+### 14. Performance Optimization
+
+**✅ DO:** Optimize for Durable Object constraints
+
+```typescript
+// GOOD - efficient state updates
+private async updateStateEfficiently(updates: Partial<State>): Promise<void> {
+  this.state = { ...this.state, ...updates };
+  // Debounce storage writes
+  if (this.storageTimer) clearTimeout(this.storageTimer);
+  this.storageTimer = setTimeout(() => this.saveState(), 100);
+}
+
+// GOOD - streaming responses
+async generateCodeStreaming(requirements: string): Promise<void> {
+  const prompt = this.buildAIPrompt('cloudflare-base', ['orm-policy'], {}, [requirements]);
+
+  const response = await this.env.AI.run('model', {
+    messages: [{ role: 'user', content: prompt }],
+    stream: true
+  });
+
+  // Stream response to client
+  for await (const chunk of response) {
+    this.broadcastToClients({ type: 'chunk', data: chunk });
+  }
+}
+```
+
+### 15. Security Considerations
+
+**✅ DO:** Implement proper security measures
+
+```typescript
+// GOOD - input validation
+async onRequest(request: Request): Promise<Response> {
+  const url = new URL(request.url);
+  const userId = url.searchParams.get('userId');
+
+  if (!userId || typeof userId !== 'string' || userId.length > 100) {
+    return new Response(JSON.stringify({ error: 'Invalid userId' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  // Verify user has access
+  const hasAccess = await this.verifyUserAccess(userId);
+  if (!hasAccess) {
+    return new Response(JSON.stringify({ error: 'Access denied' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  // Continue with operation...
+}
+```
+
+**❌ DON'T:** Skip security validation
+
+```typescript
+// BAD - no input validation
+const userId = url.searchParams.get('userId');
+// Use userId directly without validation
+```
+
+## Code Review Checklist
+
+### For Agent PRs:
+
+- [ ] Extends appropriate base class (`BaseFactoryAgent` or `BaseAgent`)
+- [ ] Uses centralized prompt system (`buildAIPrompt`)
+- [ ] Implements required abstract methods
+- [ ] Defines proper environment types
+- [ ] Uses Durable Object storage for state
+- [ ] Includes WebSocket hibernation API
+- [ ] Uses structured logging
+- [ ] Accesses databases via orchestrator RPC
+- [ ] Follows ORM policy (Drizzle + Kysely)
+- [ ] Has proper wrangler configuration
+- [ ] Includes comprehensive error handling
+- [ ] Has unit and integration tests
+- [ ] Follows security best practices
+- [ ] Includes deployment workflow
+
+## Common Mistakes to Avoid
+
+1. **Hardcoded prompts** - Use `buildAIPrompt()` instead
+2. **Direct database access** - Use orchestrator RPC bindings
+3. **Memory-only state** - Use Durable Object storage
+4. **Legacy WebSocket API** - Use hibernation API
+5. **Generic error handling** - Use structured error responses
+6. **Missing type definitions** - Define proper environment types
+7. **No logging** - Use structured logging throughout
+8. **Raw SQL queries** - Use Drizzle/Kysely ORM
+9. **Missing tests** - Test all agent functionality
+10. **Inconsistent configuration** - Follow wrangler best practices
+
+## Resources
+
+- [Base Agent Documentation](@shared/base/agents/AGENTS.md)
+- [Prompt System Guide](@shared/base/prompts/AGENTS.md)
+- [Cloudflare Agents](https://developers.cloudflare.com/agents/)
+- [Durable Objects](https://developers.cloudflare.com/durable-objects/)
+- [WebSocket Hibernation](https://developers.cloudflare.com/durable-objects/api/websockets/)

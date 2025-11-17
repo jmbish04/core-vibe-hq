@@ -1,0 +1,8 @@
+AUTH0_DOMAIN=<your auth0 domain>
+AUTH0_CLIENT_ID=<your auth0 client id>
+AUTH0_CLIENT_SECRET=<your auth0 client secret>
+AUTH0_AUDIENCE=<your auth0 audience>
+AUTH0_SCOPE=<your auth0 scope>
+API_BASE_URL=<your api base url>
+NODE_ENV=development
+COOKIE_ENCRYPTION_KEY=<your cookie encryption key>

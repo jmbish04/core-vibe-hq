@@ -1,0 +1,63 @@
+---
+description: "Shared configuration patterns - wrangler.base.jsonc and @shared directory usage"
+globs:
+  - "**/wrangler.jsonc"
+  - "**/wrangler.base.jsonc"
+  - "@shared/**/*"
+  - "apps/**/*.ts"
+alwaysApply: true
+---
+
+# Shared Configuration and Types
+
+## Wrangler Configuration
+
+**Shared base configuration:**
+- `@shared/base/wrangler.base.jsonc` contains common settings for **apps/ workers only**
+- All apps/ workers extend this via: `{ "$ref": "../../@shared/base/wrangler.base.jsonc" }`
+- **Orchestrator has its own independent `wrangler.jsonc`** (does not extend the base config)
+
+**What's in @shared/base/wrangler.base.jsonc:**
+- Service bindings to orchestrator entrypoints (`ORCHESTRATOR_*`)
+- Common compatibility settings
+- Observability configuration
+- Common environment variables
+- AI binding
+
+**Apps/ workers should NOT:**
+- Add D1, KV, R2, or other data bindings to their wrangler.jsonc
+- Override service bindings that connect to orchestrator
+- Duplicate configuration that's already in @shared/base/wrangler.base.jsonc
+
+## Shared Types and Utilities
+
+**Location**: `@shared/` directory at repository root
+
+**Structure:**
+- `@shared/base/` - Base worker entrypoint class and shared wrangler config
+- `@shared/types/` - Shared TypeScript types (db.ts, env.ts)
+- `@shared/clients/` - Shared client utilities
+- `@shared/handlers/` - Shared request handlers
+- `@shared/health/` - Health check utilities
+- `@shared/container/` - Container monitoring system
+- `@shared/worker-base/` - Worker base templates
+- `@shared/ai-packages/` - AI provider packages
+- `@shared/ai-tools/` - AI CLI tools
+
+**Usage in apps/ workers:**
+- Import shared types: `import type { ... } from '@shared/types/db'`
+- Use shared base entrypoint: `import { BaseWorkerEntrypoint } from '@shared/base/workerEntrypoint'`
+- Reference shared config: `{ "$ref": "../../@shared/base/wrangler.base.jsonc" }`
+
+## Factory Templates vs Shared Code
+
+**CRITICAL DISTINCTION**:
+
+- **`@shared/`** - All shared code (runtime imports AND initialization templates)
+- **`@shared/factory-templates/`** - Factory initialization templates COPIED when creating factories
+
+**Examples**:
+- ✅ `@shared/base/workerEntrypoint.ts` - Imported: `import { BaseWorkerEntrypoint } from '@shared/base/workerEntrypoint'`
+- ✅ `@shared/factory-templates/factory-base.Dockerfile` - Copied: `cp @shared/factory-templates/factory-base.Dockerfile apps/new-factory/Dockerfile`
+
+**See `docs/REPO_STRUCTURE_REFERENCE.md` for complete directory structure.**

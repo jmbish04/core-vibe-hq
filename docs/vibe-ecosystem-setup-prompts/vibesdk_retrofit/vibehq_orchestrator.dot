@@ -1,0 +1,174 @@
+digraph VibeOrchestrator {
+    rankdir=TB;
+    graph [labelloc="t", label="Vibe Orchestrator System Overview", fontsize=18, fontname="Helvetica", splines=ortho, pad=0.5];
+    node [shape=rect, style="filled,rounded", fontname="Helvetica", fontsize=11, margin="0.25,0.15"];
+    edge [color="#4a4a4a", arrowsize=0.7, penwidth=1.1];
+
+    subgraph cluster_external {
+        label="External Clients";
+        color="#a8d8ff";
+        style="rounded,dashed";
+        Frontend [label=<<B>Frontend UI</B><BR/>vibes.hacolby.app>, fillcolor="#e1f5ff"];
+        API_Client [label=<<B>API Clients</B><BR/>REST / WebSocket>, fillcolor="#e1f5ff"];
+        AI_Provider [label=<<B>AI Providers</B><BR/>codex-cli, etc.>, fillcolor="#e1f5ff"];
+    }
+
+    subgraph cluster_orchestrator {
+        label=<<B>Orchestrator Worker</B><BR/>(vibehq-orchestrator)>;
+        color="#9ac49f";
+        style="rounded";
+
+        subgraph cluster_rest {
+            label="REST API Routes";
+            color="#f3b97a";
+            REST_Health [label="api-health", fillcolor="#fff4e6"];
+            REST_Agents [label="api-agents", fillcolor="#fff4e6"];
+            REST_Factories [label="api-factories", fillcolor="#fff4e6"];
+            REST_Ops [label="ops-routes", fillcolor="#fff4e6"];
+            REST_Codegen [label="api-codegen", fillcolor="#fff4e6"];
+            REST_Auth [label="api-auth", fillcolor="#fff4e6"];
+            REST_Apps [label="api-apps", fillcolor="#fff4e6"];
+        }
+
+        subgraph cluster_ws {
+            label="WebSocket API";
+            color="#f7a6c6";
+            WS_Handler [label=<<B>WebSocket Handler</B><BR/>Planned>, fillcolor="#ffe6f2"];
+            WS_Types [label=<<B>WebSocket Types</B><BR/>Defined>, fillcolor="#ffe6f2"];
+        }
+
+        subgraph cluster_rpc {
+            label="RPC Entrypoints (WorkerEntrypoint)";
+            color="#8ecf8f";
+            EP_Factory [label=<<B>Factory Entrypoint</B><BR/>handleOrder, reportErrors>, fillcolor="#e8f5e9"];
+            EP_Tasks [label=<<B>Tasks Entrypoint</B><BR/>createTask, updateTask>, fillcolor="#e8f5e9"];
+            EP_GitHub [label=<<B>GitHub Entrypoint</B><BR/>createRepo, pushFiles>, fillcolor="#e8f5e9"];
+            EP_Delivery [label=<<B>Delivery Entrypoint</B><BR/>deployWorker, deployPages>, fillcolor="#e8f5e9"];
+            EP_Health [label=<<B>Health Entrypoint</B><BR/>initiateHealthCheck>, fillcolor="#e8f5e9"];
+            EP_Logging [label=<<B>Logging Entrypoint</B><BR/>logAction>, fillcolor="#e8f5e9"];
+            EP_Specialist [label=<<B>Specialist Entrypoint</B><BR/>resolveConflict, createReport>, fillcolor="#e8f5e9"];
+            EP_Factories [label=<<B>Factories Entrypoint</B><BR/>list, create>, fillcolor="#e8f5e9"];
+        }
+
+        subgraph cluster_mcp {
+            label="MCP Integration";
+            color="#c8b0db";
+            MCP_Manager [label=<<B>MCP Manager</B><BR/>Planned>, fillcolor="#f3e5f5"];
+            MCP_Tools [label=<<B>MCP Tools</B><BR/>cloudflare-docs, etc.>, fillcolor="#f3e5f5"];
+        }
+
+        subgraph cluster_d1 {
+            label="D1 Databases";
+            color="#d9c861";
+            DB_OPS [label=<<B>DB_OPS</B><BR/>Operations DB>, shape=ellipse, fillcolor="#fff9c4"];
+            DB_PROJECTS [label=<<B>DB_PROJECTS</B><BR/>Projects DB>, shape=ellipse, fillcolor="#fff9c4"];
+            DB_CHATS [label=<<B>DB_CHATS</B><BR/>Chat Logs DB>, shape=ellipse, fillcolor="#fff9c4"];
+            DB_HEALTH [label=<<B>DB_HEALTH</B><BR/>Health Logs DB>, shape=ellipse, fillcolor="#fff9c4"];
+        }
+
+        subgraph cluster_bindings {
+            label="Other Bindings";
+            color="#9ec4d4";
+            KV [label=<<B>KV Namespace</B><BR/>VibecoderStore>, fillcolor="#d9eef7"];
+            R2 [label=<<B>R2 Bucket</B><BR/>TEMPLATES_BUCKET>, fillcolor="#d9eef7"];
+            AI [label="AI Binding", fillcolor="#d9eef7"];
+            DO [label=<<B>Durable Objects</B><BR/>CodeGeneratorAgent, etc.>, fillcolor="#d9eef7"];
+        }
+    }
+
+    subgraph cluster_downstream {
+        label="Downstream Workers";
+        color="#aec8f7";
+        style="rounded";
+
+        subgraph cluster_factories {
+            label="Factory Workers";
+            color="#8dbef0";
+            AgentFactory [label="agent-factory\nPort 8788", fillcolor="#e3f2fd"];
+            UiFactory [label="ui-factory\nPort 8789", fillcolor="#e3f2fd"];
+            DataFactory [label="data-factory\nPort 8790", fillcolor="#e3f2fd"];
+            ServicesFactory [label="services-factory\nPort 8791", fillcolor="#e3f2fd"];
+        }
+
+        subgraph cluster_ops {
+            label="Ops Specialists";
+            color="#f2a9be";
+            ConflictSpec [label="ops-conflict-specialist\nPort 8792", fillcolor="#fce4ec"];
+            DeliverySpec [label="ops-delivery-report-specialist\nPort 8793", fillcolor="#fce4ec"];
+        }
+    }
+
+    subgraph cluster_service_bindings {
+        label="Service Bindings (RPC Communication)";
+        color="#92d28f";
+        style="rounded,dashed";
+        SB_Factory [label="ORCHESTRATOR_FACTORY", fillcolor="#c8e6c9"];
+        SB_Tasks [label="ORCHESTRATOR_TASKS", fillcolor="#c8e6c9"];
+        SB_GitHub [label="ORCHESTRATOR_GITHUB", fillcolor="#c8e6c9"];
+        SB_Delivery [label="ORCHESTRATOR_DELIVERY", fillcolor="#c8e6c9"];
+        SB_Health [label="ORCHESTRATOR_HEALTH_CHECK", fillcolor="#c8e6c9"];
+        SB_Logging [label="ORCHESTRATOR_LOGGING", fillcolor="#c8e6c9"];
+        SB_Ops [label="ORCHESTRATOR_OPS", fillcolor="#c8e6c9"];
+    }
+
+    Frontend -> REST_Health [label="HTTP / WebSocket"];
+    Frontend -> REST_Agents [label="HTTP / WebSocket"];
+    Frontend -> REST_Factories [label="HTTP / WebSocket"];
+    Frontend -> REST_Ops [label="HTTP / WebSocket"];
+    Frontend -> WS_Handler [label="WebSocket"];
+    API_Client -> REST_Codegen [label="REST"];
+    API_Client -> REST_Auth [label="REST"];
+    API_Client -> REST_Apps [label="REST"];
+
+    REST_Agents -> EP_Factory;
+    REST_Factories -> EP_Factories;
+    REST_Ops -> EP_Specialist;
+    WS_Handler -> WS_Types;
+    WS_Handler -> EP_Factory;
+    WS_Handler -> EP_Tasks;
+
+    EP_Factory -> DB_OPS;
+    EP_Tasks -> DB_PROJECTS;
+    EP_Tasks -> DB_CHATS;
+    EP_Health -> DB_HEALTH;
+    EP_Logging -> DB_OPS;
+    EP_Specialist -> DB_OPS;
+
+    EP_Factory -> KV;
+    EP_Factory -> R2;
+    EP_GitHub -> AI;
+    EP_Delivery -> DO;
+
+    MCP_Manager -> MCP_Tools;
+    EP_Factory -> MCP_Manager;
+    EP_Tasks -> MCP_Manager;
+
+    AgentFactory -> SB_Factory [label="RPC"];
+    AgentFactory -> SB_Tasks [label="RPC"];
+    AgentFactory -> SB_Logging [label="RPC"];
+    AgentFactory -> SB_Health [label="RPC"];
+    UiFactory -> SB_Factory [label="RPC"];
+    UiFactory -> SB_Tasks [label="RPC"];
+    UiFactory -> SB_Logging [label="RPC"];
+    DataFactory -> SB_Factory [label="RPC"];
+    DataFactory -> SB_Tasks [label="RPC"];
+    ServicesFactory -> SB_Factory [label="RPC"];
+    ServicesFactory -> SB_Tasks [label="RPC"];
+    ConflictSpec -> SB_Ops [label="RPC"];
+    DeliverySpec -> SB_Ops [label="RPC"];
+
+    SB_Factory -> EP_Factory;
+    SB_Tasks -> EP_Tasks;
+    SB_GitHub -> EP_GitHub;
+    SB_Delivery -> EP_Delivery;
+    SB_Health -> EP_Health;
+    SB_Logging -> EP_Logging;
+    SB_Ops -> EP_Specialist;
+
+    EP_Specialist -> ConflictSpec [style=dashed, label="Service Binding"];
+    EP_Specialist -> DeliverySpec [style=dashed, label="Service Binding"];
+
+    AI_Provider -> AgentFactory [label="ask-orchestrator script"];
+    AgentFactory -> EP_Factory [label="RPC via SB_Factory"];
+    EP_Factory -> Frontend [label="HIL Process"];
+}

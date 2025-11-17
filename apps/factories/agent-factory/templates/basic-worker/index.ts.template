@@ -1,0 +1,12 @@
+{{PLACEHOLDER_IMPORTS}}
+
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    {{PLACEHOLDER_FETCH_HANDLER}}
+    
+    {{PLACEHOLDER_AGENT_LOGIC}}
+    
+    return new Response('OK');
+  }
+}
+

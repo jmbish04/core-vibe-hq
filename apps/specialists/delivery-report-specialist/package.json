@@ -1,0 +1,23 @@
+{
+  "name": "@mission-control/ops-delivery-report-specialist",
+  "version": "0.1.0",
+  "description": "Mission Control Ops Specialist for AI-powered delivery verification and reporting",
+  "type": "module",
+  "main": "worker/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@cloudflare/workers-types": "^4.20241106.0",
+    "hono": "^4.4.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.3",
+    "wrangler": "^3.67.0"
+  }
+}
+

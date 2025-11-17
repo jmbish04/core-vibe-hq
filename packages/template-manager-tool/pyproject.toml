@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "template-manager-tool"
+version = "0.1.0"
+description = "Template management tool for factory automation system"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "typer>=0.9.0",
+    "pydantic>=2.0.0",
+]
+
+[project.scripts]
+template-manager = "template_manager_tool.main:app"
+
+[tool.setuptools]
+packages = ["template_manager_tool"]
+
+[tool.setuptools.package-data]
+"*" = ["*.md"]
+

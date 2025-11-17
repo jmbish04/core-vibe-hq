@@ -1,0 +1,33 @@
+{
+	"name": "vision",
+	"type": "module",
+	"private": true,
+	"scripts": {
+		"build": "vite build",
+		"cf-typegen": "wrangler types",
+		"deploy": "npm run build && wrangler deploy",
+		"dev": "vite",
+		"format": "biome lint --error-on-warnings",
+		"lint": "biome lint --error-on-warnings",
+		"preview": "npm run build && vite preview",
+		"start": "npm run dev",
+		"type-check": "tsc --noEmit"
+	},
+	"dependencies": {
+		"ai": "^5.0.82",
+		"hono": "^4.10.4",
+		"react": "^19.2.0",
+		"react-dom": "^19.2.0",
+		"workers-ai-provider": "^2.0.0",
+		"zod": "^3.25.76"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "^1.13.17",
+		"@types/react": "^19.2.2",
+		"@types/react-dom": "^19.2.2",
+		"@vitejs/plugin-react": "^5.1.0",
+		"typescript": "5.9.3",
+		"vite": "^7.1.12",
+		"wrangler": "^4.45.2"
+	}
+}

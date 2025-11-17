@@ -1,0 +1,20 @@
+{
+	"$schema": "../../node_modules/wrangler/config-schema.json",
+	"name": "orchestrator-workers",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-01-29",
+	"compatibility_flags": ["nodejs_compat"],
+	"observability": {
+		"enabled": true
+	},
+	"ai": {
+		"binding": "AI"
+	},
+	"workflows": [
+		{
+			"name": "orchestrator-workers-workflow",
+			"binding": "ORCHESTRATOR_WORKERS_WORKFLOW",
+			"class_name": "OrchestratorWorkersWorkflow"
+		}
+	]
+}

@@ -1,0 +1,31 @@
+---
+description: "Documentation standards - all docs in docs/ folder, update OVERVIEW.md"
+globs:
+  - "**/*.md"
+alwaysApply: true
+---
+
+# Documentation Standards
+
+## Markdown Documentation Files
+
+**When creating new documentation files:**
+
+- ✅ **Location**: Store in `docs/` folder at repository root
+- ✅ **Overview**: Update `docs/OVERVIEW.md` with new documentation entry
+- ❌ **Don't**: Create docs in subdirectories (e.g., `orchestrator/migrations/README.md`)
+- ❌ **Don't**: Move main `README.md` or agent instruction files
+
+**Format for `docs/OVERVIEW.md`:**
+```markdown
+## [Documentation Title]
+
+**File**: `docs/filename.md`
+**Description**: Brief description of what this document covers
+```
+
+## Key Documentation Files
+
+- `docs/AGENT_INSTRUCTIONS.md` - **CRITICAL** - Read this first for development patterns
+- `docs/DATABASE_MIGRATIONS.md` - Database migration strategy
+- `docs/OVERVIEW.md` - Table of contents for all documentation

@@ -1,0 +1,15 @@
+{
+	"name": "python-workers-mcp",
+	"version": "1.0.0",
+	"private": true,
+	"description": "Python Workers MCP Demo",
+	"scripts": {
+		"build": "./build.sh",
+		"dev": "wrangler dev",
+		"deploy": "wrangler deploy",
+		"type-check": "tsc --noEmit"
+	},
+	"devDependencies": {
+		"wrangler": "^4.45.2"
+	}
+}

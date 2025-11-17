@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "allowJs": true,
+    "strict": true,
+    "noEmit": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "types": ["node", "jest"],
+    "baseUrl": ".",
+    "paths": {
+      "@shared/*": ["../@shared/*"],
+      "partykit/partyserver": ["../third_party/partykit/packages/partyserver/src/index.ts"],
+      "partykit/partysocket": ["../third_party/partykit/packages/partysocket/src/index.ts"],
+      "partykit/hono-party": ["../third_party/partykit/packages/hono-party/src/index.ts"]
+    }
+  },
+  "include": [
+    "scripts/**/*",
+    "vite.config.ts"
+  ]
+}

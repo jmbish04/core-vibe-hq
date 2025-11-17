@@ -1,0 +1,65 @@
+{
+  "name": "@vibe-hq/base-worker",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint . --max-warnings 0",
+    "lint:fix": "eslint . --fix",
+    "lint:biome": "biome check .",
+    "lint:biome:fix": "biome check --write .",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --check .",
+    "format:fix": "prettier --write .",
+    "lint:all": "pnpm run typecheck && pnpm run lint && pnpm run lint:biome && pnpm run format",
+    "lint:all:fix": "pnpm run typecheck && pnpm run lint:fix && pnpm run lint:biome:fix && pnpm run format:fix",
+    "preview": "pnpm run build && vite preview",
+    "deploy": "pnpm run lint:all && pnpm run test:ci && pnpm run build && wrangler deploy",
+    "deploy:force": "pnpm run test:ci && pnpm run build && wrangler deploy",
+    "deploy:dev": "pnpm run test:ci && pnpm run build && wrangler deploy",
+    "cf-typegen": "wrangler types",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:unit": "vitest run tests/unit",
+    "test:smoke": "vitest run -c vitest.smoke.config.ts",
+    "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui",
+    "test:ci": "vitest run --coverage --reporter=json"
+  },
+  "dependencies": {
+    "@cloudflare/workers-types": "^4.20251014.0",
+    "@shared/contracts": "workspace:*",
+    "@shared/base": "workspace:*",
+    "@shared/types": "workspace:*",
+    "hono": "^4.0.0",
+    "zod": "^3.22.0",
+    "kysely": "^0.27.0",
+    "vitest": "^1.0.0",
+    "@vitest/coverage-v8": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.3",
+    "vite": "^5.0.0",
+    "wrangler": "^3.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "@biomejs/biome": "^1.0.0",
+    "prettier": "^3.0.0",
+    "tsx": "^4.0.0"
+  },
+  "eslintConfig": {
+    "extends": [
+      "../../@shared/eslint-config/index.js"
+    ]
+  },
+  "prettier": "../../@shared/prettier-config/index.json",
+  "biome": {
+    "extends": [
+      "../../@shared/biome-config/biome.json"
+    ]
+  }
+}

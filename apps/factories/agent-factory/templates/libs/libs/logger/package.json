@@ -1,0 +1,11 @@
+{
+	"name": "logger",
+	"private": true,
+	"main": "src/index.ts",
+	"scripts": {
+		"format": "biome format --write",
+		"test": "vitest --watch=false",
+		"test:ci": "vitest --watch=false",
+		"type-check": "tsc --noEmit"
+	}
+}

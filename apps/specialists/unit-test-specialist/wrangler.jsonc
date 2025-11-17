@@ -1,0 +1,28 @@
+{
+  "$schema": "../../wrangler.base.jsonc",
+  "name": "ops-unit-test-specialist",
+  "main": "worker/index.ts",
+  "compatibility_date": "2025-11-03",
+  "compatibility_flags": ["nodejs_compat"],
+  "browser": {
+    "binding": "BROWSER"
+  },
+  "keep_vars": true,
+  "triggers": {
+    "crons": [
+      "0 3 * * *",
+      "0 */6 * * *"
+    ]
+  },
+  "services": [
+    {
+      "binding": "ORCHESTRATOR",
+      "service": "vibehq-orchestrator"
+    }
+  ],
+  "vars": {
+    "PREVIEW_BASE_URL": "https://preview.vibesdk.dev",
+    "PREVIEW_API_TOKEN": "",
+    "PLAYWRIGHT_PROJECT": "full-regression"
+  }
+}

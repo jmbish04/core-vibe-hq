@@ -1,0 +1,20 @@
+{
+  "$ref": "../../../@shared/base/wrangler.base.jsonc",
+  "name": "cloudflare-expert-specialist",
+  "main": "worker/index.ts",
+  "dev": {
+    "port": 8795,
+    "local_protocol": "http"
+  },
+  "vars": {
+    "SPECIALIST_TYPE": "cloudflare-expert",
+    "WORKER_NAME": "Cloudflare Expert",
+    "DIAGNOSTICS_ENABLED": "true"
+  },
+  "services": [
+    {
+      "binding": "ORCHESTRATOR",
+      "service": "vibehq-orchestrator"
+    }
+  ]
+}

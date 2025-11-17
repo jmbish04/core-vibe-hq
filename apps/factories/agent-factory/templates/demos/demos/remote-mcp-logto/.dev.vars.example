@@ -1,0 +1,4 @@
+LOGTO_ENDPOINT=<your logto endpoint>
+LOGTO_APP_ID=<your logto app id>
+LOGTO_APP_SECRET=<your logto app secret>
+COOKIE_ENCRYPTION_KEY=<your cookie encryption key>

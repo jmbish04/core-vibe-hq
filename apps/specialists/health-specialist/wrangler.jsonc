@@ -1,0 +1,66 @@
+{
+  "name": "health-specialist",
+  "main": "worker/src/index.ts",
+  "compatibility_date": "2025-11-03",
+  "compatibility_flags": ["nodejs_compat_v2"],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1.0
+  },
+  "ai": {
+    "binding": "AI"
+  },
+  "services": [
+    {
+      "binding": "ORCHESTRATOR_HEALTH",
+      "service": "vibehq-orchestrator",
+      "entrypoint": "HealthOps"
+    },
+    {
+      "binding": "ORCHESTRATOR_DATA",
+      "service": "vibehq-orchestrator",
+      "entrypoint": "DataOps"
+    },
+    {
+      "binding": "ORCHESTRATOR_PROJECTS",
+      "service": "vibehq-orchestrator",
+      "entrypoint": "ProjectsOps"
+    },
+    {
+      "binding": "ORCHESTRATOR_CHATS",
+      "service": "vibehq-orchestrator",
+      "entrypoint": "ChatsOps"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "HEALTH_WEBSOCKET",
+        "class_name": "HealthWebSocket"
+      },
+      {
+        "name": "HEALTH_SPECIALIST",
+        "class_name": "HealthSpecialist"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_classes": ["HealthWebSocket", "HealthSpecialist"]
+    }
+  ],
+  "triggers": {
+    "crons": ["0 2 * * *"]
+  },
+  "dev": {
+    "local_protocol": "http",
+    "port": 8788
+  },
+  "vars": {
+    "HEALTH_CHECK_TIMEOUT": "300",
+    "MAX_CONCURRENT_TESTS": "5",
+    "AI_MODEL_DEFAULT": "@cf/meta/llama-3.1-8b-instruct",
+    "LOG_LEVEL": "info"
+  }
+}

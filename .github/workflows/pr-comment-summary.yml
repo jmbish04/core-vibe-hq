@@ -1,0 +1,87 @@
+name: Extract and Summarize PR Comments
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+
+permissions:
+  pull-requests: write
+  issues: read
+  contents: read
+
+concurrency:
+  group: pr-comment-${{ github.event.issue.number || github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  summarize-comments:
+    if: >
+      github.event.comment.user.login != 'jmbish04' &&
+      github.event.issue.pull_request != null
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Wait 30 seconds to batch comments
+        run: sleep 30
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install jq and gh
+        run: sudo apt-get update && sudo apt-get install -y jq gh
+
+      - name: Extract and sanitize PR comments
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
+        run: |
+          echo "# Extracting comments for PR #$PR_NUMBER"
+
+          # Fetch PR discussion comments (excluding you)
+          gh api -H "Accept: application/vnd.github.v3+json" \
+            "/repos/$REPO/issues/$PR_NUMBER/comments" --paginate |
+          jq -r '
+            .[]
+            | select(.user.login != "jmbish04")
+            | .body
+          ' > all_comments_raw.txt
+
+          # Fetch inline code review comments
+          gh api -H "Accept: application/vnd.github.v3+json" \
+            "/repos/$REPO/pulls/$PR_NUMBER/comments" --paginate |
+          jq -r '
+            .[]
+            | select(.user.login != "jmbish04")
+            | "### File: \(.path)\nLine: \(.line // "N/A")\n\n" + (.body // "")
+          ' >> all_comments_raw.txt
+
+          # Clean text: remove badges, slash commands, bot names, etc.
+          sed -E -i \
+            -e 's|!\[[^]]*\]\([^)]*\)||g' \
+            -e 's|@[A-Za-z0-9._-]+\[bot\]||g' \
+            -e 's|/gemini[^\n]*||gi' \
+            -e 's|/colby[^\n]*||gi' \
+            -e 's|@jules||gi' \
+            -e '/^$/N;/^\n$/D' \
+            all_comments_raw.txt
+
+          # Add a header
+          {
+            echo "# 🧠 Cleaned PR Feedback Summary"
+            echo ""
+            cat all_comments_raw.txt
+          } > cleaned_comments.md
+
+          echo "---- Cleaned Comments Preview ----"
+          head -n 40 cleaned_comments.md || true
+
+      - name: Post cleaned summary as PR comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
+        run: |
+          gh pr comment "$PR_NUMBER" --repo "$REPO" --body-file cleaned_comments.md

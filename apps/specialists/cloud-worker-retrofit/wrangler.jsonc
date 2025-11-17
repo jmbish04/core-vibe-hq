@@ -1,0 +1,21 @@
+{
+  "$ref": "../../../@shared/base/wrangler.base.jsonc",
+  "name": "cloud-worker-retrofit",
+  "main": "worker/index.ts",
+  "dev": {
+    "port": 8794,
+    "local_protocol": "http"
+  },
+  "vars": {
+    "SPECIALIST_TYPE": "retrofit",
+    "DEFAULT_MODEL": "@cf/openai/gpt-4o-mini",
+    "WORKER_NAME": "Cloud Worker Retrofit",
+    "DIAGNOSTICS_ENABLED": "true"
+  },
+  "services": [
+    {
+      "binding": "ORCHESTRATOR",
+      "service": "vibehq-orchestrator"
+    }
+  ]
+}

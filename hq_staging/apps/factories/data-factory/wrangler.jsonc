@@ -1,0 +1,27 @@
+/**
+ * Data Factory Worker Configuration
+ * 
+ * Extends the shared base configuration. All database operations
+ * go through orchestrator service bindings.
+ */
+{
+  "$ref": "../../@shared/base/wrangler.base.jsonc",
+  
+  "name": "data-factory",
+  "main": "worker/index.ts",
+  
+  // Development settings with unique port
+  "dev": {
+    "port": 8789,
+    "local_protocol": "http"
+  },
+  
+  // Data Factory specific environment variables
+  "vars": {
+    "FACTORY_TYPE": "data",
+    "MAX_CONCURRENT_OPERATIONS": "20",
+    "DEFAULT_MODEL": "@cf/openai/gpt-oss-120b",
+    "WORKER_NAME": "Data Factory",
+    "DIAGNOSTICS_ENABLED": "true"
+  }
+}

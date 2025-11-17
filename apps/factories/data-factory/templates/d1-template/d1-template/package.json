@@ -1,0 +1,36 @@
+{
+	"name": "d1-template",
+	"description": "Cloudflare's native serverless SQL database.",
+	"private": true,
+	"cloudflare": {
+		"label": "Worker + D1 Database",
+		"products": [
+			"Workers",
+			"D1"
+		],
+		"categories": [
+			"storage"
+		],
+		"docs_url": "https://developers.cloudflare.com/d1/",
+		"preview_icon_url": "https://imagedelivery.net/wSMYJvS3Xw-n339CbDyDIA/6c63cca8-354a-4951-45a0-d58769ac6f00/public",
+		"preview_image_url": "https://imagedelivery.net/wSMYJvS3Xw-n339CbDyDIA/aa6158f1-7711-4485-f134-a8c802c0a800/preview",
+		"publish": true
+	},
+	"devDependencies": {
+		"drizzle-kit": "^0.30.1",
+		"drizzle-orm": "^0.36.0",
+		"kysely-d1": "^0.4.0",
+		"typescript": "5.8.3",
+		"wrangler": "4.21.x"
+	},
+	"scripts": {
+		"cf-typegen": "wrangler types",
+		"check": "tsc && wrangler deploy --dry-run",
+		"deploy": "wrangler deploy",
+		"dev": "pnpm migrate:local && wrangler dev",
+		"predeploy": "wrangler d1 migrations apply DB --remote",
+		"migrate:generate": "drizzle-kit generate",
+		"migrate:local": "wrangler d1 migrations apply DB --local",
+		"migrate:remote": "wrangler d1 migrations apply DB --remote"
+	}
+}

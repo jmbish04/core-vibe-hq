@@ -1,0 +1,17 @@
+{
+	"files": [],
+	"references": [
+		{
+			"path": "../../orchestrator/tsconfig.app.json"
+		},
+		{
+			"path": "../../orchestrator/tsconfig.node.json"
+		},
+		{
+			"path": "../../orchestrator/tsconfig.worker.json"
+		}
+	],
+	"compilerOptions": {
+		"composite": true
+	}
+}

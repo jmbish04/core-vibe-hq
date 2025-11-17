@@ -1,0 +1,27 @@
+/**
+ * Delivery Report Specialist Worker Configuration
+ * 
+ * Extends the shared base configuration. All database operations
+ * go through orchestrator service bindings.
+ */
+{
+  "$ref": "../../../@shared/base/wrangler.base.jsonc",
+  
+  "name": "ops-delivery-report-specialist",
+  "main": "worker/index.ts",
+  
+  // Development settings with unique port
+  "dev": {
+    "port": 8793,
+    "local_protocol": "http"
+  },
+  
+  // Specialist-specific environment variables
+  "vars": {
+    "SPECIALIST_TYPE": "delivery-report",
+    "MAX_CONCURRENT_REPORTS": "5",
+    "DEFAULT_MODEL": "@cf/openai/gpt-oss-120b",
+    "WORKER_NAME": "Delivery Report Specialist",
+    "DIAGNOSTICS_ENABLED": "true"
+  }
+}
