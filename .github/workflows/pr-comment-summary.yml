@@ -27,7 +27,7 @@ jobs:
         run: sleep 30
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install jq and gh
         run: sudo apt-get update && sudo apt-get install -y jq gh
