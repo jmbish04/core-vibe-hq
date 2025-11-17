@@ -170,7 +170,7 @@
 		"vite-plugin-monaco-editor": "^1.1.0",
 		"vite-plugin-node-polyfills": "^0.24.0",
 		"vitest": "^3.2.4",
-		"wrangler": "4.45.0",
+		"wrangler": "4.47.0",
 		"rollup": "^4.0.0",
 		"@rollup/plugin-node-resolve": "^15.0.0",
 		"@rollup/plugin-commonjs": "^28.0.0"
