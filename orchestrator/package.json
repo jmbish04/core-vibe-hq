@@ -173,7 +173,7 @@
 		"wrangler": "4.45.0",
 		"rollup": "^4.0.0",
 		"@rollup/plugin-node-resolve": "^15.0.0",
-		"@rollup/plugin-commonjs": "^28.0.0"
+		"@rollup/plugin-commonjs": "^29.0.0"
 	},
 	"prettier": {
 		"singleQuote": true,
