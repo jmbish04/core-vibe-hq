@@ -37,5 +37,13 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: apps/data-factory
+
+      - name: Validate Deployment
+        run: ./scripts/validate-worker-deployment.sh data-factory
+        env:
+          WORKER_NAME: data-factory
+          WORKER_TYPE: factory
+          HEALTH_WORKER_TARGETS: ${{ secrets.HEALTH_WORKER_TARGETS }}
+          ORCHESTRATOR_URL: ${{ secrets.ORCHESTRATOR_URL }}
           preCommands: wrangler d1 migrations apply DB --remote
 

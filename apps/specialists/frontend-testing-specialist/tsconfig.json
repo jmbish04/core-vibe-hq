@@ -1,0 +1,26 @@
+{
+  "extends": "../../../tsconfig.json",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "allowJs": true,
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "types": ["@cloudflare/workers-types", "vitest/globals"],
+    "lib": ["ES2022"]
+  },
+  "include": [
+    "worker/**/*",
+    "playwright-configs/**/*",
+    "puppeteer-configs/**/*"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

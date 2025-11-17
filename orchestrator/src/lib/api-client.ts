@@ -56,7 +56,22 @@ import type{
     CodeGenArgs,
     AgentPreviewResponse,
     PlatformStatusData,
-    RateLimitError
+    RateLimitError,
+	HealthCheckSummaryResponse,
+	WorkersResponse,
+	HealthCheckStatusData,
+	HealthCheckHistoryResponse,
+	InitiateHealthCheckParams,
+	InitiateHealthCheckResponse,
+	AnalyticsTrendsResponse,
+	AnalyticsTrendsParams,
+	GetHilRequestsParams,
+	GetHilRequestsResponse,
+	GetHilRequestResponse,
+	SubmitHilResponseParams,
+	UpdateHilStatusParams,
+	SubmitHilResponseResponse,
+	UpdateHilStatusResponse
 } from '@/api-types';
 import {
     
@@ -365,7 +380,7 @@ class ApiClient {
                         toast.error(errorData.message);
                     }
                     switch (errorData.type) {
-                        case SecurityErrorType.CSRF_VIOLATION:
+                        case SecurityErrorType.CSRF_TOKEN_INVALID:
                             // Handle CSRF failures with retry
                             if (response.status === 403 && !isRetry) {
                                 // Clear expired token and retry with fresh one
@@ -373,10 +388,11 @@ class ApiClient {
                                 return this.requestRaw(endpoint, options, true);
                             }
                             break;
-                        case SecurityErrorType.RATE_LIMITED:
+                        case SecurityErrorType.RATE_LIMIT_EXCEEDED:
                             // Handle rate limiting
                             console.log('Rate limited', errorData);
-                            throw RateLimitExceededError.fromRateLimitError(errorData as unknown as RateLimitError);
+                            const details = 'details' in errorData ? errorData.details as any : undefined;
+                            throw new RateLimitExceededError(errorData.message || 'Rate limit exceeded', details);
                         default:
                             // Security error
                             throw new SecurityError(errorData.type, errorData.message);
@@ -1185,6 +1201,208 @@ class ApiClient {
 
 		// Redirect to OAuth provider
 		window.location.href = oauthUrl.toString();
+	}
+
+	/**
+	 * Health Check API Methods
+	 */
+
+	/**
+	 * Get health check summary and latest status
+	 */
+	async getHealthSummary(): Promise<ApiResponse<HealthCheckSummaryResponse>> {
+		const response = await this.request<HealthCheckSummaryResponse>('/api/health');
+		if (response.success && response.data?.ok) {
+			return { success: true, data: response.data };
+		}
+		return { success: false, error: { message: 'Failed to fetch health summary', name: 'ApiError' } };
+	}
+
+	/**
+	 * Get configured workers list
+	 */
+	async getHealthWorkers(): Promise<ApiResponse<WorkersResponse>> {
+		const response = await this.request<WorkersResponse>('/api/health/workers');
+		if (response.success && response.data?.ok) {
+			return { success: true, data: response.data };
+		}
+		return { success: false, error: { message: 'Failed to fetch workers', name: 'ApiError' } };
+	}
+
+	/**
+	 * Get latest health check for a specific worker
+	 */
+	async getWorkerLatestHealth(workerName: string): Promise<ApiResponse<HealthCheckStatusData>> {
+		const response = await this.request<HealthCheckStatusData>(`/api/health/workers/${encodeURIComponent(workerName)}/latest`);
+		if (response.success && response.data?.ok) {
+			return { success: true, data: response.data };
+		}
+		return { success: false, error: { message: 'Failed to fetch worker health', name: 'ApiError' } };
+	}
+
+	/**
+	 * Get health check history with pagination
+	 */
+	async getHealthCheckHistory(page: number = 1, limit: number = 20, triggerType?: string): Promise<ApiResponse<HealthCheckHistoryResponse>> {
+		const params = new URLSearchParams({
+			page: page.toString(),
+			limit: limit.toString(),
+		});
+		if (triggerType) {
+			params.set('triggerType', triggerType);
+		}
+		const response = await this.request<HealthCheckHistoryResponse>(`/api/health/checks?${params.toString()}`);
+		if (response.success && response.data?.ok) {
+			return { success: true, data: response.data };
+		}
+		return { success: false, error: { message: 'Failed to fetch health check history', name: 'ApiError' } };
+	}
+
+	/**
+	 * Get detailed status for a specific health check
+	 */
+	async getHealthCheckStatus(healthCheckUuid: string): Promise<ApiResponse<HealthCheckStatusData>> {
+		const response = await this.request<HealthCheckStatusData>(`/api/health/checks/${encodeURIComponent(healthCheckUuid)}`);
+		if (response.success && response.data?.ok) {
+			return { success: true, data: response.data };
+		}
+		return { success: false, error: { message: 'Failed to fetch health check status', name: 'ApiError' } };
+	}
+
+	/**
+	 * Initiate a new health check
+	 */
+	async initiateHealthCheck(params: InitiateHealthCheckParams): Promise<ApiResponse<InitiateHealthCheckResponse>> {
+		const response = await this.request<InitiateHealthCheckResponse>('/api/health/checks', {
+			method: 'POST',
+			body: params,
+		});
+		if (response.success && response.data?.ok) {
+			return { success: true, data: response.data };
+		}
+		return { success: false, error: { message: 'Failed to initiate health check', name: 'ApiError' } };
+	}
+
+	/**
+	 * Analytics API Methods
+	 */
+
+	/**
+	 * Get analytics trends data
+	 */
+	async getAnalyticsTrends(params: AnalyticsTrendsParams): Promise<ApiResponse<AnalyticsTrendsResponse>> {
+		const queryParams = new URLSearchParams({
+			metric: params.metric,
+			...(params.timeframe && { timeframe: params.timeframe }),
+			...(params.interval && { interval: params.interval }),
+			...(params.eventTypes && { eventTypes: params.eventTypes }),
+			...(params.patchIds && { patchIds: params.patchIds }),
+		});
+
+		const response = await this.request<AnalyticsTrendsResponse>(`/api/analytics/trends?${queryParams.toString()}`);
+		if (response.success && response.data?.ok) {
+			return { success: true, data: response.data };
+		}
+		return { success: false, error: { message: 'Failed to fetch analytics trends', name: 'ApiError' } };
+	}
+
+	/**
+	 * Ops & Integrations API Methods
+	 */
+
+	/**
+	 * Trigger operations scanning
+	 */
+	async triggerOpsScan(scanType?: 'full' | 'incremental'): Promise<ApiResponse<any>> {
+		const response = await this.request<any>('/api/ops/scan', {
+			method: 'POST',
+			body: { type: scanType || 'incremental' },
+		});
+		if (response.success) {
+			return { success: true, data: response.data };
+		}
+		return { success: false, error: { message: 'Failed to trigger ops scan', name: 'ApiError' } };
+	}
+
+	/**
+	 * Get ops monitoring status/stats
+	 */
+	async getOpsStatus(): Promise<ApiResponse<any>> {
+		const response = await this.request<any>('/api/ops/status');
+		if (response.success) {
+			return { success: true, data: response.data };
+		}
+		return { success: false, error: { message: 'Failed to fetch ops status', name: 'ApiError' } };
+	}
+
+	/**
+	 * Get agent/factory status
+	 */
+	async getAgentStatus(): Promise<ApiResponse<any>> {
+		const response = await this.request<any>('/api/agents/status');
+		if (response.success) {
+			return { success: true, data: response.data };
+		}
+		return { success: false, error: { message: 'Failed to fetch agent status', name: 'ApiError' } };
+	}
+
+	/**
+	 * Get pipeline status
+	 */
+	async getPipelineStatus(): Promise<ApiResponse<any>> {
+		const response = await this.request<any>('/api/pipeline/status');
+		if (response.success) {
+			return { success: true, data: response.data };
+		}
+		return { success: false, error: { message: 'Failed to fetch pipeline status', name: 'ApiError' } };
+	}
+
+	/**
+	 * Get HIL (Human In The Loop) status
+	 */
+	async getHilStatus(): Promise<ApiResponse<any>> {
+		const response = await this.request<any>('/api/hil/status');
+		if (response.success) {
+			return { success: true, data: response.data };
+		}
+		return { success: false, error: { message: 'Failed to fetch HIL status', name: 'ApiError' } };
+	}
+
+	/**
+	 * Get all HIL requests
+	 */
+	async getHilRequests(params: GetHilRequestsParams = {}): Promise<ApiResponse<GetHilRequestsResponse>> {
+		return this.request<GetHilRequestsResponse>('/api/hil/requests', {
+			method: 'GET',
+			body: params,
+		});
+	}
+
+	/**
+	 * Get a specific HIL request by ID
+	 */
+	async getHilRequest(params: { id: number }): Promise<ApiResponse<GetHilRequestResponse>> {
+		return this.request<GetHilRequestResponse>(`/api/hil/requests/${params.id}`);
+	}
+
+	/**
+	 * Submit a response to a HIL request
+	 */
+	async submitHilResponse(params: SubmitHilResponseParams): Promise<ApiResponse<SubmitHilResponseResponse>> {
+		return this.request<SubmitHilResponseResponse>('/api/hil/respond', {
+			method: 'POST',
+			body: params,
+		});
+	}
+
+	/**
+	 * Update the status of a HIL request
+	 */
+	async updateHilStatus(params: UpdateHilStatusParams): Promise<ApiResponse<UpdateHilStatusResponse>> {
+		return this.request<UpdateHilStatusResponse>(`/api/hil/requests/${params.id}/status`, {
+			method: 'PATCH',
+			body: { status: params.status },
+		});
 	}
 }
 

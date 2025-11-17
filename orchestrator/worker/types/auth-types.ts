@@ -13,11 +13,11 @@ export type OAuthProvider = 'google' | 'github';
  * Authenticated user for middleware and session context
  */
 export interface AuthUser {
-	id: string;
-	email: string;
-	displayName?: string;
-	username?: string;
-	avatarUrl?: string;
+        id: string;
+        email: string;
+        displayName?: string;
+        username?: string;
+        avatarUrl?: string;
     bio?: string;
     timezone?: string;
     provider?: string;
@@ -30,31 +30,31 @@ export interface AuthUser {
  * Session information for active authentication
  */
 export interface AuthSession {
-	userId: string;
-	email: string;
-	sessionId: string;
-	expiresAt: Date | null;
-};
+        userId: string;
+        email: string;
+        sessionId: string;
+        expiresAt: Date | null;
+}
 
 /**
  * Token payload structure for JWT tokens
  */
 export interface TokenPayload {
-	// Standard JWT claims
-	sub: string; // User ID
-	iat: number; // Issued at
-	exp: number; // Expires at
+        // Standard JWT claims
+        sub: string; // User ID
+        iat: number; // Issued at
+        exp: number; // Expires at
 
-	// Custom claims
-	email: string;
-	type: 'access' | 'refresh';
-	jti?: string; // JWT ID (for refresh tokens)
+        // Custom claims
+        email: string;
+        type: 'access' | 'refresh';
+        jti?: string; // JWT ID (for refresh tokens)
 
-	// Session context
-	sessionId: string;
+        // Session context
+        sessionId: string;
 
-	// Security metadata
-	ipHash?: string; // Hashed IP for security validation
+        // Security metadata
+        ipHash?: string; // Hashed IP for security validation
 }
 
 export interface AuthUserSession {
@@ -67,37 +67,37 @@ export interface AuthUserSession {
  */
 export interface AuthResult extends AuthUserSession {
     expiresAt: Date | null;
-	accessToken: string;
-	isNewUser?: boolean;
-	requiresEmailVerification?: boolean;
-	redirectUrl?: string;
-};
+        accessToken: string;
+        isNewUser?: boolean;
+        requiresEmailVerification?: boolean;
+        redirectUrl?: string;
+}
 
 /**
  * OAuth provider user information
  */
 export interface OAuthUserInfo {
-	id: string;
-	email: string;
-	name?: string;
-	picture?: string;
-	emailVerified?: boolean;
-	locale?: string;
+        id: string;
+        email: string;
+        name?: string;
+        picture?: string;
+        emailVerified?: boolean;
+        locale?: string;
 
-	// Provider-specific data
-	providerData?: Record<string, unknown>;
+        // Provider-specific data
+        providerData?: Record<string, unknown>;
 }
 
 /**
  * OAuth tokens from provider
  */
 export interface OAuthTokens {
-	accessToken: string;
-	refreshToken?: string;
-	idToken?: string;
-	tokenType: string;
-	expiresIn?: number;
-	scope?: string;
+        accessToken: string;
+        refreshToken?: string;
+        idToken?: string;
+        tokenType: string;
+        expiresIn?: number;
+        scope?: string;
 }
 
 /**
@@ -105,7 +105,7 @@ export interface OAuthTokens {
  * Uses OAuthState schema with typed provider
  */
 export type OAuthStateData = Omit<OAuthState, 'provider'> & {
-	provider: OAuthProvider;
+        provider: OAuthProvider;
 };
 
 /**
@@ -123,50 +123,50 @@ export type { SchemaAuthAttempt as AuthAttempt };
  * Password validation result with strength scoring
  */
 export interface PasswordValidationResult {
-	valid: boolean;
-	errors?: string[];
-	score: number; // 0-4 strength score
+        valid: boolean;
+        errors?: string[];
+        score: number; // 0-4 strength score
 
-	// Detailed validation
-	requirements?: {
-		minLength: boolean;
-		hasLowercase: boolean;
-		hasUppercase: boolean;
-		hasNumbers: boolean;
-		hasSpecialChars: boolean;
-		notCommon: boolean;
-		noSequential: boolean;
-	};
+        // Detailed validation
+        requirements?: {
+            minLength: boolean;
+            hasLowercase: boolean;
+            hasUppercase: boolean;
+            hasNumbers: boolean;
+            hasSpecialChars: boolean;
+            notCommon: boolean;
+            noSequential: boolean;
+        };
 
-	// Suggestions for improvement
-	suggestions?: string[];
+        // Suggestions for improvement
+        suggestions?: string[];
 }
 
 /**
  * Security context for authentication operations
  */
 export interface SecurityContext {
-	// Request metadata
-	ipAddress: string;
-	userAgent: string;
-	requestId: string;
+        // Request metadata
+        ipAddress: string;
+        userAgent: string;
+        requestId: string;
 
-	// Geographic and network info
-	country?: string;
-	region?: string;
-	isp?: string;
+        // Geographic and network info
+        country?: string;
+        region?: string;
+        isp?: string;
 
-	// Device fingerprinting
-	deviceFingerprint?: string;
+        // Device fingerprinting
+        deviceFingerprint?: string;
 
-	// Risk assessment
-	riskScore?: number; // 0-100
-	riskFactors?: string[];
+        // Risk assessment
+        riskScore?: number; // 0-100
+        riskFactors?: string[];
 }
 
 /**
  * Audit log entry with security context
  */
 export type AuditLogEntry = AuditLog & {
-	securityContext?: Partial<SecurityContext>;
+        securityContext?: Partial<SecurityContext>;
 };

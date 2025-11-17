@@ -169,7 +169,9 @@ export class FactoryOrchestratorAgent extends BaseFactoryAgent {
       // Step 2: Call Python script to process placeholders
       // The Python script will read the placeholder JSON and process cloned template files
       const workspacePath = `/workspace/target_${order.id}`
-      const processResult = await this.execCommand('factory-orchestrator', [
+      const processResult = await this.execCommand('pnpm', [
+        'factory-orchestrator',
+        '--',
         'process-placeholders',
         '--order-id',
         order.id,
@@ -180,11 +182,28 @@ export class FactoryOrchestratorAgent extends BaseFactoryAgent {
       ])
 
       if (!processResult.ok) {
-        // Log warning but don't fail - placeholder processing may have partial success
         await this.logAction('fulfill_order', 'warn', {
           order_id: order.id,
-          warning: `Placeholder processing had issues: ${processResult.stderr}`,
+          warning: `Placeholder processing reported issues: ${processResult.stderr}`,
         })
+      } else {
+        try {
+          const stdoutLines = processResult.stdout.trim().split('\n')
+          const summaryLine = stdoutLines[stdoutLines.length - 1]
+          const parsedSummary = JSON.parse(summaryLine)
+
+          await this.logAction('fulfill_order', 'info', {
+            order_id: order.id,
+            placeholder_summary: parsedSummary,
+          })
+        } catch (parseError) {
+          await this.logAction('fulfill_order', 'warn', {
+            order_id: order.id,
+            warning: 'Unable to parse factory-orchestrator output as JSON',
+            error: parseError instanceof Error ? parseError.message : String(parseError),
+            raw_output: processResult.stdout,
+          })
+        }
       }
 
       // Step 3: Collect created/modified files (would be determined by Python script output)

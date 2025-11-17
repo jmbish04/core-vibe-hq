@@ -11,7 +11,7 @@ import { commonSchemas } from '../../../utils/inputValidator';
  */
 export const loginSchema = z.object({
   email: commonSchemas.email,
-  password: z.string().min(1, 'Password is required')
+  password: z.string().min(1, 'Password is required'),
 });
 
 export type LoginRequest = z.infer<typeof loginSchema>;
@@ -22,7 +22,7 @@ export type LoginRequest = z.infer<typeof loginSchema>;
 export const registerSchema = z.object({
   email: commonSchemas.email,
   password: commonSchemas.password,
-  name: z.string().min(2, 'Name must be at least 2 characters').max(100).optional()
+  name: z.string().min(2, 'Name must be at least 2 characters').max(100).optional(),
 });
 
 export type RegisterRequest = z.infer<typeof registerSchema>;
@@ -34,7 +34,7 @@ export const oauthCallbackSchema = z.object({
   code: z.string().min(1, 'Authorization code is required'),
   state: z.string().min(1, 'State is required'),
   error: z.string().optional(),
-  error_description: z.string().optional()
+  error_description: z.string().optional(),
 });
 
 export type OAuthCallbackRequest = z.infer<typeof oauthCallbackSchema>;
@@ -45,10 +45,10 @@ export type OAuthCallbackRequest = z.infer<typeof oauthCallbackSchema>;
 export const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, 'Current password is required'),
   newPassword: commonSchemas.password,
-  confirmPassword: z.string()
+  confirmPassword: z.string(),
 }).refine(data => data.newPassword === data.confirmPassword, {
   message: "Passwords don't match",
-  path: ['confirmPassword']
+  path: ['confirmPassword'],
 });
 
 export type ChangePasswordRequest = z.infer<typeof changePasswordSchema>;
@@ -57,7 +57,7 @@ export type ChangePasswordRequest = z.infer<typeof changePasswordSchema>;
  * Forgot password schema
  */
 export const forgotPasswordSchema = z.object({
-  email: commonSchemas.email
+  email: commonSchemas.email,
 });
 
 export type ForgotPasswordRequest = z.infer<typeof forgotPasswordSchema>;
@@ -68,10 +68,10 @@ export type ForgotPasswordRequest = z.infer<typeof forgotPasswordSchema>;
 export const resetPasswordSchema = z.object({
   token: z.string().min(1, 'Reset token is required'),
   newPassword: commonSchemas.password,
-  confirmPassword: z.string()
+  confirmPassword: z.string(),
 }).refine(data => data.newPassword === data.confirmPassword, {
   message: "Passwords don't match",
-  path: ['confirmPassword']
+  path: ['confirmPassword'],
 });
 
 export type ResetPasswordRequest = z.infer<typeof resetPasswordSchema>;
@@ -80,7 +80,7 @@ export type ResetPasswordRequest = z.infer<typeof resetPasswordSchema>;
  * Verify email schema
  */
 export const verifyEmailSchema = z.object({
-  token: z.string().min(1, 'Verification token is required')
+  token: z.string().min(1, 'Verification token is required'),
 });
 
 export type VerifyEmailRequest = z.infer<typeof verifyEmailSchema>;

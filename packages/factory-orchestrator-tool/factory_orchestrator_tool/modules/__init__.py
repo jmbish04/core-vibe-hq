@@ -1,4 +1,0 @@
-"""
-Factory Orchestrator Tool Modules
-"""
-

@@ -2,10 +2,10 @@
  * orchestrator/worker/entrypoints/HilOps.ts
  * ------------------------------------------------------------
  * Human-in-the-Loop (HIL) Management RPC Entrypoint
- * 
+ *
  * Provides RPC methods for managing HIL requests.
  * Exposed via service binding for frontend and downstream workers.
- * 
+ *
  * Responsibilities:
  * - List HIL requests (with filters)
  * - Get specific HIL request details
@@ -15,9 +15,10 @@
  * (Kysely-enabled)
  */
 
-import type { CoreEnv } from '@shared/types/env'
-import { BaseWorkerEntrypoint } from '@shared/base/workerEntrypoint'
-import { sql } from 'kysely'
+import type { CoreEnv } from '@shared/types/env';
+import { BaseWorkerEntrypoint } from '@shared/base/workerEntrypoint';
+import { sql } from 'kysely';
+import { AutomatedHilResponses } from '../services/hil/AutomatedHilResponses';
 
 export interface HilRequest {
   id: number
@@ -74,7 +75,134 @@ export interface UpdateHilStatusResponse {
   error?: string
 }
 
+export interface CreateHilRequestParams {
+  order_id: string
+  conversation_id: string
+  question: string
+  context?: any
+}
+
+export interface CreateHilRequestResponse {
+  ok: boolean
+  request?: HilRequest
+  automated_response?: string
+  error?: string
+}
+
 export class HilOps extends BaseWorkerEntrypoint<CoreEnv> {
+  private automatedResponses: AutomatedHilResponses;
+
+  constructor(ctx: ExecutionContext, env: CoreEnv) {
+    super(ctx, env);
+    this.automatedResponses = new AutomatedHilResponses(this.db, this.logger);
+  }
+
+  /**
+   * Create a new HIL request with automated response checking
+   */
+  async createHilRequest(params: CreateHilRequestParams): Promise<CreateHilRequestResponse> {
+    try {
+      await this.db
+        .insertInto('operation_logs')
+        .values({
+          source: 'hil_ops.rpc',
+          operation: 'create_hil_request',
+          level: 'info',
+          details: JSON.stringify(params),
+        })
+        .execute();
+
+      // First, check if we can provide an automated response
+      const automatedResponse = await this.automatedResponses.generateAutomatedResponse({
+        question: params.question,
+        orderId: params.order_id,
+        conversationId: params.conversation_id,
+        context: params.context,
+      });
+
+      if (automatedResponse && automatedResponse.confidence >= 0.8) {
+        // Automated response available - create and immediately resolve the HIL request
+        const resolvedRequest = await this.db
+          .insertInto('hil_requests')
+          .values({
+            order_id: params.order_id,
+            conversation_id: params.conversation_id,
+            question: params.question,
+            context: params.context ? JSON.stringify(params.context) : null,
+            status: 'resolved',
+            user_response: automatedResponse.response,
+            resolved_at: sql`CURRENT_TIMESTAMP`,
+            updated_at: sql`CURRENT_TIMESTAMP`,
+          })
+          .returningAll()
+          .executeTakeFirst();
+
+        // Update the AI provider conversation
+        await this.db
+          .updateTable('ai_provider_conversations')
+          .set({
+            status: 'resolved',
+            solution: automatedResponse.response,
+            updated_at: sql`CURRENT_TIMESTAMP`,
+          })
+          .where('conversation_id', '=', params.conversation_id)
+          .execute();
+
+        await this.db
+          .insertInto('operation_logs')
+          .values({
+            source: 'hil_ops.rpc',
+            operation: 'automated_hil_resolution',
+            level: 'info',
+            details: JSON.stringify({
+              order_id: params.order_id,
+              conversation_id: params.conversation_id,
+              confidence: automatedResponse.confidence,
+              category: automatedResponse.category,
+              reasoning: automatedResponse.reasoning,
+            }),
+          })
+          .execute();
+
+        return {
+          ok: true,
+          request: resolvedRequest as HilRequest,
+          automated_response: automatedResponse.response,
+        };
+      }
+
+      // No automated response - create pending HIL request
+      const pendingRequest = await this.db
+        .insertInto('hil_requests')
+        .values({
+          order_id: params.order_id,
+          conversation_id: params.conversation_id,
+          question: params.question,
+          context: params.context ? JSON.stringify(params.context) : null,
+          status: 'pending',
+          updated_at: sql`CURRENT_TIMESTAMP`,
+        })
+        .returningAll()
+        .executeTakeFirst();
+
+      return {
+        ok: true,
+        request: pendingRequest as HilRequest,
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      await this.db
+        .insertInto('operation_logs')
+        .values({
+          source: 'hil_ops.rpc',
+          operation: 'create_hil_request',
+          level: 'error',
+          details: JSON.stringify({ ...params, error: errorMessage }),
+        })
+        .execute();
+      return { ok: false, error: errorMessage };
+    }
+  }
 
   /**
    * Get HIL requests (with optional filters)
@@ -89,45 +217,45 @@ export class HilOps extends BaseWorkerEntrypoint<CoreEnv> {
           level: 'info',
           details: JSON.stringify(params),
         })
-        .execute()
+        .execute();
 
       let query = this.db
         .selectFrom('hil_requests')
-        .selectAll()
+        .selectAll();
 
       if (params.order_id) {
-        query = query.where('order_id', '=', params.order_id)
+        query = query.where('order_id', '=', params.order_id);
       }
 
       if (params.status) {
-        query = query.where('status', '=', params.status)
+        query = query.where('status', '=', params.status);
       }
 
       // Get total count
-      const totalQuery = query.select(({ fn }) => [fn.count<number>('id').as('count')])
-      const totalResult = await totalQuery.executeTakeFirst()
-      const total = totalResult?.count || 0
+      const totalQuery = query.select(({ fn }) => [fn.count<number>('id').as('count')]);
+      const totalResult = await totalQuery.executeTakeFirst();
+      const total = totalResult?.count || 0;
 
       // Apply pagination
       if (params.limit) {
-        query = query.limit(params.limit)
+        query = query.limit(params.limit);
       }
       if (params.offset) {
-        query = query.offset(params.offset)
+        query = query.offset(params.offset);
       }
 
       // Order by created_at descending
-      query = query.orderBy('created_at', 'desc')
+      query = query.orderBy('created_at', 'desc');
 
-      const requests = await query.execute()
+      const requests = await query.execute();
 
       return {
         ok: true,
         requests: requests as HilRequest[],
         total,
-      }
+      };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
+      const errorMessage = error instanceof Error ? error.message : String(error);
       await this.db
         .insertInto('operation_logs')
         .values({
@@ -136,8 +264,8 @@ export class HilOps extends BaseWorkerEntrypoint<CoreEnv> {
           level: 'error',
           details: JSON.stringify({ ...params, error: errorMessage }),
         })
-        .execute()
-      return { ok: false, error: errorMessage }
+        .execute();
+      return { ok: false, error: errorMessage };
     }
   }
 
@@ -154,24 +282,24 @@ export class HilOps extends BaseWorkerEntrypoint<CoreEnv> {
           level: 'info',
           details: JSON.stringify(params),
         })
-        .execute()
+        .execute();
 
       const request = await this.db
         .selectFrom('hil_requests')
         .selectAll()
         .where('id', '=', params.id)
-        .executeTakeFirst()
+        .executeTakeFirst();
 
       if (!request) {
-        return { ok: false, error: `HIL request not found: ${params.id}` }
+        return { ok: false, error: `HIL request not found: ${params.id}` };
       }
 
       return {
         ok: true,
         request: request as HilRequest,
-      }
+      };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
+      const errorMessage = error instanceof Error ? error.message : String(error);
       await this.db
         .insertInto('operation_logs')
         .values({
@@ -180,8 +308,8 @@ export class HilOps extends BaseWorkerEntrypoint<CoreEnv> {
           level: 'error',
           details: JSON.stringify({ ...params, error: errorMessage }),
         })
-        .execute()
-      return { ok: false, error: errorMessage }
+        .execute();
+      return { ok: false, error: errorMessage };
     }
   }
 
@@ -198,7 +326,7 @@ export class HilOps extends BaseWorkerEntrypoint<CoreEnv> {
           level: 'info',
           details: JSON.stringify({ id: params.id }),
         })
-        .execute()
+        .execute();
 
       const updated = await this.db
         .updateTable('hil_requests')
@@ -210,10 +338,10 @@ export class HilOps extends BaseWorkerEntrypoint<CoreEnv> {
         })
         .where('id', '=', params.id)
         .returningAll()
-        .executeTakeFirst()
+        .executeTakeFirst();
 
       if (!updated) {
-        return { ok: false, error: `HIL request not found: ${params.id}` }
+        return { ok: false, error: `HIL request not found: ${params.id}` };
       }
 
       // Update related AI provider conversation status
@@ -225,14 +353,14 @@ export class HilOps extends BaseWorkerEntrypoint<CoreEnv> {
           updated_at: sql`CURRENT_TIMESTAMP`,
         })
         .where('conversation_id', '=', updated.conversation_id)
-        .execute()
+        .execute();
 
       return {
         ok: true,
         request: updated as HilRequest,
-      }
+      };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
+      const errorMessage = error instanceof Error ? error.message : String(error);
       await this.db
         .insertInto('operation_logs')
         .values({
@@ -241,8 +369,8 @@ export class HilOps extends BaseWorkerEntrypoint<CoreEnv> {
           level: 'error',
           details: JSON.stringify({ ...params, error: errorMessage }),
         })
-        .execute()
-      return { ok: false, error: errorMessage }
+        .execute();
+      return { ok: false, error: errorMessage };
     }
   }
 
@@ -259,15 +387,15 @@ export class HilOps extends BaseWorkerEntrypoint<CoreEnv> {
           level: 'info',
           details: JSON.stringify(params),
         })
-        .execute()
+        .execute();
 
       const updateData: any = {
         status: params.status,
         updated_at: sql`CURRENT_TIMESTAMP`,
-      }
+      };
 
       if (params.status === 'resolved') {
-        updateData.resolved_at = sql`CURRENT_TIMESTAMP`
+        updateData.resolved_at = sql`CURRENT_TIMESTAMP`;
       }
 
       const updated = await this.db
@@ -275,18 +403,18 @@ export class HilOps extends BaseWorkerEntrypoint<CoreEnv> {
         .set(updateData)
         .where('id', '=', params.id)
         .returningAll()
-        .executeTakeFirst()
+        .executeTakeFirst();
 
       if (!updated) {
-        return { ok: false, error: `HIL request not found: ${params.id}` }
+        return { ok: false, error: `HIL request not found: ${params.id}` };
       }
 
       return {
         ok: true,
         request: updated as HilRequest,
-      }
+      };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
+      const errorMessage = error instanceof Error ? error.message : String(error);
       await this.db
         .insertInto('operation_logs')
         .values({
@@ -295,8 +423,8 @@ export class HilOps extends BaseWorkerEntrypoint<CoreEnv> {
           level: 'error',
           details: JSON.stringify({ ...params, error: errorMessage }),
         })
-        .execute()
-      return { ok: false, error: errorMessage }
+        .execute();
+      return { ok: false, error: errorMessage };
     }
   }
 }

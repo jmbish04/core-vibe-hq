@@ -4,8 +4,8 @@
  */
 
 import {
-	UserAnalyticsData,
-	ChatAnalyticsData,
+  UserAnalyticsData,
+  ChatAnalyticsData,
 } from '../../../services/analytics/types';
 
 /**

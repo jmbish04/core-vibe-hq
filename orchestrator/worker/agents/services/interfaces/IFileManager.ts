@@ -48,7 +48,7 @@ export interface IFileManager {
      * Get generated files map
      */
     getGeneratedFilesMap(): Record<string, FileOutputType>;
-    
+
     /**
      * Get generated files
      */

@@ -31,6 +31,10 @@ A comprehensive, AI-powered health monitoring and testing system for the core-vi
 
 ## 🗄️ Database Schema
 
+**Database Location**: All health tables are consolidated in the `DB_HEALTH` D1 database under a unified Drizzle schema.
+
+**Schema Consolidation**: As of Task 39 completion, all health-related tables (`health_checks`, `worker_health_checks`, `health_check_schedules`, `test_profiles`, `test_results`, `ai_logs`, `health_summaries`) are now defined in a single Drizzle schema file (`orchestrator/worker/database/schema.ts`) instead of being split across multiple files. This provides better type safety and consistency.
+
 ### Main Tables
 
 #### `health_checks` - Health Check Instances
@@ -158,6 +162,54 @@ const status = await env.ORCHESTRATOR_HEALTH_CHECK.getHealthCheckStatus(
 
 // Returns: HealthCheckStatusResponse with worker results
 ```
+
+### HTTP API Endpoints
+
+The orchestrator now exposes REST endpoints so operators and dashboards can invoke and observe health checks without using the Workers RPC directly.
+
+#### `POST /api/health/checks`
+- **Description**: Trigger a new distributed health check run.
+- **Body** *(JSON)*:
+  - `trigger_type`: `'on_demand' | 'cron'` (default `'on_demand'`)
+  - `worker_filters`: optional string array of worker names/types to target
+  - `include_unit_tests`, `include_performance_tests`, `include_integration_tests`: optional booleans
+  - `timeout_minutes`: optional number override
+- **Response**: `{ ok: true, result: HealthCheckResponse }`
+
+#### `GET /api/health`
+- **Description**: Returns the latest health check summary plus overall statistics.
+- **Response**: `{ ok: true, summary: {...}, latest: HealthCheckStatusResponse | null }`
+
+#### `GET /api/health/checks`
+- **Description**: Paginated list of historical health checks.
+- **Query params**: `page`, `limit`, `triggerType`.
+- **Response**: `{ ok: true, history: HealthCheckHistoryResponse }`
+
+#### `GET /api/health/checks/:uuid`
+- **Description**: Detailed results for a specific health check run.
+
+#### `GET /api/health/workers`
+- **Description**: Returns the configured worker targets (service bindings or URLs) that will participate in health checks.
+
+#### `GET /api/health/workers/:workerName/latest`
+- **Description**: Fetch the most recent result recorded for a specific worker.
+
+### Worker RPC Endpoints
+
+Both the orchestrator and the base worker expose a common set of RPC endpoints that the health system uses to coordinate checks:
+
+| Method & Path              | Purpose                                | Notes |
+|---------------------------|----------------------------------------|-------|
+| `POST /health-check/execute` | Orchestrator request to start a worker health check | Body contains `worker_check_uuid`, options, and orchestrator callback URL. |
+| `GET /health-check/status`  | Lightweight status probe               | Returns cached status without executing full tests. |
+| `GET /health-check/quick`   | Minimal connectivity / latency probe   | Used for rapid availability checks. |
+| `POST /health-check/result` *(orchestrator only)* | Worker callback delivering health check results | Automatically stores results in `DB_HEALTH`. |
+
+> **Security:** These endpoints bypass CSRF middleware and are intended for service-to-service communication. Use the internal Cloudflare network or add a pre-shared token if exposing publicly.
+
+### Base Worker Observability
+
+The base worker also exposes `GET /api/health` and `GET /api/health/history`, backed by the `HealthCheckActor`, which provides real-time status and a rolling history of the proactive checks it runs every two minutes. These endpoints are public (read-only) so Mission Control dashboards can surface live readiness indicators.
 
 #### `getHealthCheckHistory(page, limit, triggerType?)`
 Get paginated health check history.
@@ -517,4 +569,3 @@ const result = await env.ORCHESTRATOR_HEALTH_CHECK.initiateHealthCheck({
 ```
 
 This comprehensive health check system ensures the reliability and performance of your entire worker ecosystem with intelligent monitoring, detailed analysis, and proactive recommendations! 🎯✨
-

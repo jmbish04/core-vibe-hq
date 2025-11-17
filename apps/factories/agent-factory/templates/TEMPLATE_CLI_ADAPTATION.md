@@ -101,3 +101,4 @@ A root script that can:
 4. Update template catalogs to use CLI discovery
 5. Add CI/CD integration for template validation
 
+

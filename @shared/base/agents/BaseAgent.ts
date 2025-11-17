@@ -14,6 +14,7 @@
  */
 
 import type { CoreEnv, BaseEnv } from '@shared/types/env'
+import { promptBuilder, type PromptContext } from '@shared/base/prompts'
 
 // Structured logger interface
 export interface StructuredLogger {
@@ -54,6 +55,69 @@ export abstract class BaseAgent {
         this.context = context
         // Check if we have direct DB access (orchestrator) or need to use service bindings
         this.isOrchestrator = 'DB' in env && env.DB !== undefined
+    }
+
+    /**
+     * Build a comprehensive AI prompt from the centralized prompt repository
+     *
+     * Combines base Cloudflare guidelines with domain-specific policies
+     * and custom instructions for consistent AI responses.
+     */
+    protected buildAIPrompt(
+        basePromptId: string,
+        additionalPromptIds: string[] = [],
+        context?: PromptContext,
+        customInstructions?: string[]
+    ): string {
+        try {
+            const composedPrompt = promptBuilder.build(basePromptId, additionalPromptIds);
+
+            if (context || customInstructions) {
+                const finalPrompt = promptBuilder.compose({
+                    basePrompt: composedPrompt.sources[0] ? {
+                        id: composedPrompt.metadata.version,
+                        name: 'Composed Prompt',
+                        description: 'Dynamically composed prompt',
+                        version: composedPrompt.metadata.version,
+                        tags: [],
+                        priority: 0,
+                        content: composedPrompt.content
+                    } : {
+                        id: 'fallback',
+                        name: 'Fallback Prompt',
+                        description: 'Fallback when composition fails',
+                        version: '1.0.0',
+                        tags: [],
+                        priority: 0,
+                        content: 'You are an AI assistant. Please respond helpfully.'
+                    },
+                    additionalPrompts: [],
+                    context,
+                    customInstructions
+                });
+
+                return finalPrompt.content;
+            }
+
+            return composedPrompt.content;
+        } catch (error) {
+            this.logger.error('Failed to build AI prompt', { error, basePromptId, additionalPromptIds });
+            return 'You are an AI assistant. Please respond helpfully.';
+        }
+    }
+
+    /**
+     * Get a specific prompt template by ID
+     */
+    protected getPromptTemplate(promptId: string) {
+        return promptBuilder.get(promptId);
+    }
+
+    /**
+     * List all available prompt templates
+     */
+    protected listPromptTemplates() {
+        return promptBuilder.list();
     }
 
     /**

@@ -31,6 +31,14 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: apps/ops-specialists/conflict-specialist
 
+      - name: Validate Conflict Specialist Deployment
+        run: ./scripts/validate-worker-deployment.sh conflict-specialist
+        env:
+          WORKER_NAME: conflict-specialist
+          WORKER_TYPE: specialist
+          HEALTH_WORKER_TARGETS: ${{ secrets.HEALTH_WORKER_TARGETS }}
+          ORCHESTRATOR_URL: ${{ secrets.ORCHESTRATOR_URL }}
+
   deploy-delivery-report-specialist:
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -52,4 +60,12 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: apps/ops-specialists/delivery-report-specialist
+
+      - name: Validate Delivery Report Specialist Deployment
+        run: ./scripts/validate-worker-deployment.sh delivery-report-specialist
+        env:
+          WORKER_NAME: delivery-report-specialist
+          WORKER_TYPE: specialist
+          HEALTH_WORKER_TARGETS: ${{ secrets.HEALTH_WORKER_TARGETS }}
+          ORCHESTRATOR_URL: ${{ secrets.ORCHESTRATOR_URL }}
 

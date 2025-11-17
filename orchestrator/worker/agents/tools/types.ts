@@ -1,25 +1,25 @@
 import { ChatCompletionFunctionTool } from 'openai/resources';
 export interface MCPServerConfig {
-	name: string;
-	sseUrl: string;
+        name: string;
+        sseUrl: string;
 }
 export interface MCPResult {
-	content: string;
+        content: string;
 }
 
 export interface ErrorResult {
-	error: string;
+        error: string;
 }
 
 export interface ToolCallResult {
-	id: string;
-	name: string;
-	arguments: Record<string, unknown>;
-	result?: unknown;
+        id: string;
+        name: string;
+        arguments: Record<string, unknown>;
+        result?: unknown;
 }
 
-export type ToolImplementation<TArgs = Record<string, unknown>, TResult = unknown> = 
-	(args: TArgs) => Promise<TResult>;
+export type ToolImplementation<TArgs = Record<string, unknown>, TResult = unknown> =
+        (args: TArgs) => Promise<TResult>;
 
 export type ToolDefinition<
     TArgs = Record<string, unknown>,

@@ -2,11 +2,11 @@
  * Ops Specialist API routes for the orchestrator
  */
 
-import { Hono } from 'hono'
-import { OpsSpecialist } from '../../../../apps/ops-specialists/ops-specialist'
-import type { Env } from '../../types'
+import { Hono } from 'hono';
+import { OpsSpecialist } from '../../../../apps/ops-specialists/ops-specialist';
+import type { Env } from '../../types';
 
-const app = new Hono<{ Bindings: Env }>()
+const app = new Hono<{ Bindings: Env }>();
 
 /**
  * POST /ops/resolve-conflict
@@ -14,23 +14,23 @@ const app = new Hono<{ Bindings: Env }>()
  */
 app.post('/resolve-conflict', async (c) => {
   try {
-    const { repo, branch, conflictFiles } = await c.req.json()
-    
+    const { repo, branch, conflictFiles } = await c.req.json();
+
     if (!repo || !branch || !Array.isArray(conflictFiles)) {
-      return c.json({ error: 'Missing required fields: repo, branch, conflictFiles' }, 400)
+      return c.json({ error: 'Missing required fields: repo, branch, conflictFiles' }, 400);
     }
 
-    await OpsSpecialist.resolveConflict(c.env, repo, branch, conflictFiles)
-    
-    return c.json({ 
-      success: true, 
-      message: `Conflict resolution initiated for ${repo}:${branch}` 
-    })
+    await OpsSpecialist.resolveConflict(c.env, repo, branch, conflictFiles);
+
+    return c.json({
+      success: true,
+      message: `Conflict resolution initiated for ${repo}:${branch}`,
+    });
   } catch (error: any) {
-    console.error('Conflict resolution failed:', error)
-    return c.json({ error: error.message || 'Internal server error' }, 500)
+    console.error('Conflict resolution failed:', error);
+    return c.json({ error: error.message || 'Internal server error' }, 500);
   }
-})
+});
 
 /**
  * GET /ops/report/:orderId
@@ -38,23 +38,23 @@ app.post('/resolve-conflict', async (c) => {
  */
 app.get('/report/:orderId', async (c) => {
   try {
-    const orderId = c.req.param('orderId')
-    
+    const orderId = c.req.param('orderId');
+
     if (!orderId) {
-      return c.json({ error: 'Order ID is required' }, 400)
+      return c.json({ error: 'Order ID is required' }, 400);
     }
 
-    const report = await OpsSpecialist.generateDeliveryReport(c.env, orderId)
-    
+    const report = await OpsSpecialist.generateDeliveryReport(c.env, orderId);
+
     return c.json({
       success: true,
-      report
-    })
+      report,
+    });
   } catch (error: any) {
-    console.error('Report generation failed:', error)
-    return c.json({ error: error.message || 'Internal server error' }, 500)
+    console.error('Report generation failed:', error);
+    return c.json({ error: error.message || 'Internal server error' }, 500);
   }
-})
+});
 
 /**
  * POST /ops/final-qa/:orderId
@@ -62,22 +62,22 @@ app.get('/report/:orderId', async (c) => {
  */
 app.post('/final-qa/:orderId', async (c) => {
   try {
-    const orderId = c.req.param('orderId')
-    
+    const orderId = c.req.param('orderId');
+
     if (!orderId) {
-      return c.json({ error: 'Order ID is required' }, 400)
+      return c.json({ error: 'Order ID is required' }, 400);
     }
 
-    const result = await OpsSpecialist.finalQA(c.env, orderId)
-    
+    const result = await OpsSpecialist.finalQA(c.env, orderId);
+
     return c.json({
       success: true,
-      qa_result: result
-    })
+      qa_result: result,
+    });
   } catch (error: any) {
-    console.error('Final QA failed:', error)
-    return c.json({ error: error.message || 'Internal server error' }, 500)
+    console.error('Final QA failed:', error);
+    return c.json({ error: error.message || 'Internal server error' }, 500);
   }
-})
+});
 
-export { app as opsRoutes }
+export { app as opsRoutes };

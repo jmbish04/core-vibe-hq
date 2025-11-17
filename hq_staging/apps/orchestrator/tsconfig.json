@@ -2,13 +2,13 @@
 	"files": [],
 	"references": [
 		{
-			"path": "./tsconfig.app.json"
+			"path": "../../orchestrator/tsconfig.app.json"
 		},
 		{
-			"path": "./tsconfig.node.json"
+			"path": "../../orchestrator/tsconfig.node.json"
 		},
 		{
-			"path": "./tsconfig.worker.json"
+			"path": "../../orchestrator/tsconfig.worker.json"
 		}
 	],
 	"compilerOptions": {

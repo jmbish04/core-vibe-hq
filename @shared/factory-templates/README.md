@@ -18,8 +18,10 @@ This directory contains the shared base configuration and templates for all Vibe
 The `factory-base.Dockerfile` provides:
 
 - **Node.js 22** - Latest LTS Node.js runtime
-- **Python 3** - For Python-based tooling
+- **Bun** - Fast JavaScript runtime for monitoring and tooling
+- **Python 3** - For Python-based tooling and REST API monitoring
 - **Cloudflare Wrangler** - For deploying Workers
+- **Multi-API Monitoring** - REST, WebSocket, and RPC monitoring infrastructure
 - **AI CLI Toolchain** - Pre-installed but dormant:
   - Codex CLI
   - Google Gemini CLI
@@ -28,6 +30,33 @@ The `factory-base.Dockerfile` provides:
   - GitHub Copilot CLI
 
 **Note**: AI CLI tools are installed but remain inactive until their API keys are injected at runtime by the orchestrator.
+
+### Multi-API Monitoring System
+
+The factory base image includes a comprehensive monitoring system:
+
+- **REST API Monitoring** (`monitoring/rest_monitor.py`):
+  - FastAPI-based health checks and metrics
+  - Component status tracking (REST, WebSocket, RPC, AI providers)
+  - System resource monitoring (memory, CPU)
+
+- **WebSocket Monitoring** (`monitoring/ws_monitor.py`):
+  - WebSocket connectivity testing
+  - Connection health checks
+  - Message throughput monitoring
+
+- **Bun/Node.js Monitoring** (`monitoring/monitor.js`):
+  - JavaScript-based monitoring server
+  - Integrated health check endpoints
+  - Real-time metrics collection
+
+**Health Check Endpoints**:
+- `GET /health` - Overall system health
+- `GET /metrics` - Detailed performance metrics
+- `POST /check/rest` - REST API connectivity
+- `POST /check/websocket` - WebSocket connectivity
+- `POST /check/rpc` - RPC connectivity
+- `POST /check/all` - All components health
 
 ## Wrangler Partial Config
 

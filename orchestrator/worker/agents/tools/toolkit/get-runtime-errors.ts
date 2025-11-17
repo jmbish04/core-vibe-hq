@@ -8,15 +8,15 @@ type GetRuntimeErrorsArgs = Record<string, never>;
 type GetRuntimeErrorsResult = { errors: RuntimeError[] } | ErrorResult;
 
 export function createGetRuntimeErrorsTool(
-	agent: CodingAgentInterface,
-	logger: StructuredLogger
+  agent: CodingAgentInterface,
+  logger: StructuredLogger,
 ): ToolDefinition<GetRuntimeErrorsArgs, GetRuntimeErrorsResult> {
-	return {
-		type: 'function' as const,
-		function: {
-			name: 'get_runtime_errors',
-			description:
-				`Fetch latest runtime errors from the sandbox error storage. These are errors captured by the runtime error detection system.
+  return {
+    type: 'function' as const,
+    function: {
+      name: 'get_runtime_errors',
+      description:
+                    `Fetch latest runtime errors from the sandbox error storage. These are errors captured by the runtime error detection system.
 
 **IMPORTANT CHARACTERISTICS:**
 - Runtime errors are USER-INTERACTION DRIVEN - they only appear when users interact with the app
@@ -37,29 +37,29 @@ export function createGetRuntimeErrorsTool(
 **When NOT to use:**
 - ❌ Immediately after deploy (errors need user interaction to generate)
 - ❌ In rapid succession (errors update on user interaction, not continuously)`,
-			parameters: {
-				type: 'object',
-				properties: {},
-				required: [],
-			},
-		},
-		implementation: async (_args?) => {
-			try {
-				logger.info('Fetching runtime errors from sandbox');
-				
-				const errors = await agent.fetchRuntimeErrors(true);
-				
-				return { 
-					errors: errors || []
-				};
-			} catch (error) {
-				return {
-					error:
-						error instanceof Error
-							? `Failed to get runtime errors: ${error.message}`
-							: 'Unknown error occurred while fetching runtime errors',
-				};
-			}
-		},
-	};
+      parameters: {
+        type: 'object',
+        properties: {},
+        required: [],
+      },
+    },
+    implementation: async (_args?) => {
+      try {
+        logger.info('Fetching runtime errors from sandbox');
+
+        const errors = await agent.fetchRuntimeErrors(true);
+
+        return {
+          errors: errors || [],
+        };
+      } catch (error) {
+        return {
+          error:
+                            error instanceof Error
+                              ? `Failed to get runtime errors: ${error.message}`
+                              : 'Unknown error occurred while fetching runtime errors',
+        };
+      }
+    },
+  };
 }

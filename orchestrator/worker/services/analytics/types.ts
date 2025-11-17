@@ -129,7 +129,7 @@ export class AnalyticsError extends Error {
     message: string,
     public code: string,
     public statusCode: number = 500,
-    public originalError?: Error
+    public originalError?: Error,
   ) {
     super(message);
     this.name = 'AnalyticsError';

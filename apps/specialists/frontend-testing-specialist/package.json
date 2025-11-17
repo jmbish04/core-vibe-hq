@@ -1,0 +1,42 @@
+{
+  "name": "frontend-testing-specialist",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Specialist for configuring and running Playwright and Puppeteer tests on frontend applications",
+  "scripts": {
+    "check": "npm run check:lint && npm run check:prettier && npm run test:unit",
+    "check:lint": "npm run lint",
+    "check:prettier": "prettier . --check",
+    "fix": "npm run fix:lint && npm run fix:prettier",
+    "fix:lint": "npm run lint -- --fix",
+    "fix:prettier": "prettier . --write",
+    "lint": "eslint . --ext .ts,.tsx",
+    "test": "npm run test:unit && npm run test:e2e",
+    "test:unit": "vitest --run",
+    "test:e2e": "playwright test",
+    "test:e2e:local": "playwright test --config playwright-configs/playwright.config.local.ts",
+    "test:e2e:cloudflare": "playwright test --config playwright-configs/playwright.config.cloudflare.ts",
+    "test:puppeteer": "node scripts/run-puppeteer-tests.js",
+    "postinstall": "playwright install --with-deps"
+  },
+  "dependencies": {
+    "hono": "^4.3.8",
+    "puppeteer": "^23.0.2",
+    "@cloudflare/puppeteer": "^0.0.8"
+  },
+  "devDependencies": {
+    "@cloudflare/playwright": "^1.0.0",
+    "@playwright/test": "1.53.1",
+    "@types/node": "^24.0.4",
+    "eslint": "^8.57.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "prettier": "^3.6.2",
+    "typescript": "^5.5.4",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=20.16.0 || >=22.3.0"
+  }
+}

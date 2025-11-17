@@ -8,14 +8,14 @@
  *   - Injects dynamic vars (factory name, AI provider)
  *   - Commits and pushes to GitHub via GitHubClient
  * ------------------------------------------
- * 
+ *
  * This service works in both Worker and Node.js contexts:
  * - Worker: Uses GitHubClient to commit files via GitHub API
  * - Node.js CLI: Uses GitHubClient with GitHub token from env
  */
 
-import type { CoreEnv } from '@shared/types/env'
-import { GitHubClient } from '../../clients/githubClient'
+import type { CoreEnv } from '@shared/types/env';
+import { GitHubClient } from '../../clients/githubClient';
 
 export interface FactoryInitOptions {
   name: string              // e.g. "agent-factory"
@@ -68,7 +68,7 @@ function generateWranglerConfig(factoryName: string, factoryType: string): strin
     "DIAGNOSTICS_ENABLED": "true"
   }
 }
-`
+`;
 }
 
 /**
@@ -78,8 +78,8 @@ function generateWorkerIndex(factoryName: string, factoryType: string): string {
   const className = factoryName
     .split('-')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join('')
-  
+    .join('');
+
   return `/**
  * ${factoryName} Factory Worker Entrypoint
  * 
@@ -111,7 +111,7 @@ export default {
     })
   },
 }
-`
+`;
 }
 
 /**
@@ -148,10 +148,10 @@ jobs:
       - name: Build & Deploy Worker
         uses: cloudflare/wrangler-action@v3
         with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          apiToken: \${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: \${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: apps/${factoryName}
-`
+`;
 }
 
 /**
@@ -172,7 +172,7 @@ function generatePackageJson(factoryName: string): string {
   "dependencies": {},
   "devDependencies": {}
 }
-`
+`;
 }
 
 /**
@@ -182,8 +182,8 @@ function generateReadme(factoryName: string, factoryType: string, aiProvider?: s
   const displayName = factoryName
     .split('-')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ')
-  
+    .join(' ');
+
   return `# ${displayName}
 
 ${displayName} factory worker for VibeHQ ecosystem.
@@ -215,7 +215,7 @@ Deployment is handled automatically via GitHub Actions when changes are pushed t
 - All database operations go through orchestrator service bindings
 - Factory communicates with orchestrator via RPC entrypoints
 - Uses shared factory base Dockerfile for containerization
-`
+`;
 }
 
 /**
@@ -224,26 +224,26 @@ Deployment is handled automatically via GitHub Actions when changes are pushed t
  */
 export async function initFactory(
   opts: FactoryInitOptions,
-  env: CoreEnv
+  env: CoreEnv,
 ): Promise<FactoryInitResult> {
-  const { 
-    name, 
-    factory_type = 'agent', 
+  const {
+    name,
+    factory_type = 'agent',
     aiProvider = 'codex',
-    create_pr = false, 
+    create_pr = false,
     branch,
     github = true,
     order_id,
-    task_uuid
-  } = opts
+    task_uuid,
+  } = opts;
 
-  const factoryName = name
-  const factoryPath = `apps/${factoryName}`
-  const branchName = branch || `factory/${factoryName}-init`
-  const filesCreated: string[] = []
+  const factoryName = name;
+  const factoryPath = `apps/${factoryName}`;
+  const branchName = branch || `factory/${factoryName}-init`;
+  const filesCreated: string[] = [];
 
   try {
-    const gh = new GitHubClient(env)
+    const gh = new GitHubClient(env);
 
     // 1. Create branch if it doesn't exist
     if (github) {
@@ -252,19 +252,19 @@ export async function initFactory(
           env.GITHUB_OWNER,
           env.GITHUB_REPO,
           branchName,
-          'main'
-        )
+          'main',
+        );
       } catch (error) {
         // Branch might already exist, continue
-        const errorMessage = error instanceof Error ? error.message : String(error)
+        const errorMessage = error instanceof Error ? error.message : String(error);
         if (!errorMessage.includes('already exists') && !errorMessage.includes('Reference already exists')) {
-          throw error
+          throw error;
         }
       }
     }
 
     // 2. Create wrangler.jsonc
-    const wranglerContent = generateWranglerConfig(factoryName, factory_type)
+    const wranglerContent = generateWranglerConfig(factoryName, factory_type);
     if (github) {
       await gh.upsertFile({
         owner: env.GITHUB_OWNER,
@@ -273,12 +273,12 @@ export async function initFactory(
         content: wranglerContent,
         message: `Initialize ${factoryName} factory with shared base config`,
         branch: branchName,
-      })
+      });
     }
-    filesCreated.push(`${factoryPath}/wrangler.jsonc`)
+    filesCreated.push(`${factoryPath}/wrangler.jsonc`);
 
     // 3. Create worker/index.ts
-    const workerIndexContent = generateWorkerIndex(factoryName, factory_type)
+    const workerIndexContent = generateWorkerIndex(factoryName, factory_type);
     if (github) {
       await gh.upsertFile({
         owner: env.GITHUB_OWNER,
@@ -287,12 +287,12 @@ export async function initFactory(
         content: workerIndexContent,
         message: `Add worker entrypoint for ${factoryName}`,
         branch: branchName,
-      })
+      });
     }
-    filesCreated.push(`${factoryPath}/worker/index.ts`)
+    filesCreated.push(`${factoryPath}/worker/index.ts`);
 
     // 4. Create deploy workflow
-    const workflowContent = generateDeployWorkflow(factoryName)
+    const workflowContent = generateDeployWorkflow(factoryName);
     if (github) {
       await gh.upsertFile({
         owner: env.GITHUB_OWNER,
@@ -301,12 +301,12 @@ export async function initFactory(
         content: workflowContent,
         message: `Add deploy workflow for ${factoryName}`,
         branch: branchName,
-      })
+      });
     }
-    filesCreated.push(`.github/workflows/deploy-${factoryName}.yml`)
+    filesCreated.push(`.github/workflows/deploy-${factoryName}.yml`);
 
     // 5. Create package.json
-    const packageJsonContent = generatePackageJson(factoryName)
+    const packageJsonContent = generatePackageJson(factoryName);
     if (github) {
       await gh.upsertFile({
         owner: env.GITHUB_OWNER,
@@ -315,12 +315,12 @@ export async function initFactory(
         content: packageJsonContent,
         message: `Add package.json for ${factoryName}`,
         branch: branchName,
-      })
+      });
     }
-    filesCreated.push(`${factoryPath}/package.json`)
+    filesCreated.push(`${factoryPath}/package.json`);
 
     // 6. Create README.md
-    const readmeContent = generateReadme(factoryName, factory_type, aiProvider)
+    const readmeContent = generateReadme(factoryName, factory_type, aiProvider);
     if (github) {
       await gh.upsertFile({
         owner: env.GITHUB_OWNER,
@@ -329,12 +329,12 @@ export async function initFactory(
         content: readmeContent,
         message: `Add README for ${factoryName}`,
         branch: branchName,
-      })
+      });
     }
-    filesCreated.push(`${factoryPath}/README.md`)
+    filesCreated.push(`${factoryPath}/README.md`);
 
     // 7. Optionally create PR
-    let prUrl: string | undefined
+    let prUrl: string | undefined;
     if (github && create_pr) {
       const pr = await gh.openPR({
         owner: env.GITHUB_OWNER,
@@ -343,14 +343,14 @@ export async function initFactory(
         base: 'main',
         title: `Initialize ${factoryName} factory`,
         body: `This PR initializes the ${factoryName} factory with:\n\n` +
-          `- Shared base Dockerfile configuration\n` +
-          `- Wrangler config with orchestrator service bindings\n` +
-          `- Worker entrypoint structure\n` +
-          `- Deploy workflow\n` +
+          '- Shared base Dockerfile configuration\n' +
+          '- Wrangler config with orchestrator service bindings\n' +
+          '- Worker entrypoint structure\n' +
+          '- Deploy workflow\n' +
           `- AI Provider: ${aiProvider}\n` +
-          `\nGenerated by orchestrator factory initialization system.`,
-      })
-      prUrl = pr.html_url
+          '\nGenerated by orchestrator factory initialization system.',
+      });
+      prUrl = pr.html_url;
     }
 
     return {
@@ -359,16 +359,16 @@ export async function initFactory(
       files_created: filesCreated,
       branch: github ? branchName : undefined,
       pr_url: prUrl,
-    }
+    };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    
+    const errorMessage = error instanceof Error ? error.message : String(error);
+
     return {
       ok: false,
       factory_name: factoryName,
       files_created: filesCreated,
       error: errorMessage,
-    }
+    };
   }
 }
 

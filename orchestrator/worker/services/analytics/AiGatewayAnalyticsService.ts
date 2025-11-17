@@ -15,7 +15,7 @@ import {
   GraphQLQuery,
   QueryResult,
   AnalyticsError,
-  AnalyticsQueryType
+  AnalyticsQueryType,
 } from './types';
 
 export class AiGatewayAnalyticsService {
@@ -29,7 +29,7 @@ export class AiGatewayAnalyticsService {
       endpoint: this.config.graphqlEndpoint,
       isStaging: this.config.isStaging,
       accountId: this.config.accountId,
-      gateway: this.config.gateway
+      gateway: this.config.gateway,
     });
   }
 
@@ -37,23 +37,23 @@ export class AiGatewayAnalyticsService {
    * Initialize configuration from environment variables
    */
   private initializeConfig(env: Env): AnalyticsConfig {
-    let config: AnalyticsConfig = {
+    const config: AnalyticsConfig = {
       accountId: '',
       gateway: '',
       graphqlEndpoint: 'https://api.cloudflare.com/client/v4/graphql',
       apiToken: '',
-      isStaging: false
+      isStaging: false,
     };
 
     // If CLOUDFLARE_AI_GATEWAY_URL is set, parse it and use staging settings
     if (env.CLOUDFLARE_AI_GATEWAY_URL) {
       try {
         const { accountId, gateway, isStaging } = this.parseGatewayUrl(env.CLOUDFLARE_AI_GATEWAY_URL);
-        
+
         config.accountId = accountId;
         config.gateway = gateway;
         config.isStaging = isStaging;
-        
+
         if (isStaging) {
           config.graphqlEndpoint = 'https://api.staging.cloudflare.com/client/v4/graphql';
           config.apiToken = env.CLOUDFLARE_AI_GATEWAY_TOKEN || '';
@@ -76,14 +76,20 @@ export class AiGatewayAnalyticsService {
     // Validate required configuration
     if (!config.accountId || !config.gateway || !config.apiToken) {
       const missing = [];
-      if (!config.accountId) missing.push('Account ID');
-      if (!config.gateway) missing.push('Gateway name');
-      if (!config.apiToken) missing.push('API token');
-      
+      if (!config.accountId) {
+        missing.push('Account ID');
+      }
+      if (!config.gateway) {
+        missing.push('Gateway name');
+      }
+      if (!config.apiToken) {
+        missing.push('API token');
+      }
+
       throw new AnalyticsError(
         `Missing required configuration: ${missing.join(', ')}`,
         'CONFIG_MISSING',
-        500
+        500,
       );
     }
 
@@ -97,25 +103,25 @@ export class AiGatewayAnalyticsService {
     try {
       const parsedUrl = new URL(url);
       const isStaging = url.includes('staging');
-      
+
       // URL format: https://staging.gateway.ai.cfdata.org/v1/{account_id}/{gateway_name}
       const pathParts = parsedUrl.pathname.split('/').filter(part => part);
-      
+
       if (pathParts.length >= 3 && pathParts[0] === 'v1') {
         return {
           accountId: pathParts[1],
           gateway: pathParts[2],
-          isStaging
+          isStaging,
         };
       }
-      
+
       throw new Error('Invalid gateway URL format');
     } catch (error) {
       throw new AnalyticsError(
         `Failed to parse gateway URL: ${error}`,
         'INVALID_URL',
         400,
-        error as Error
+        error as Error,
       );
     }
   }
@@ -126,26 +132,26 @@ export class AiGatewayAnalyticsService {
    */
   private getTimeRange(days?: number): TimeRange {
     const end = new Date();
-    
+
     // Cloudflare AI Gateway API has a time range limit (~32 days max)
     // If no days specified, use 30 days to stay within limits
     const daysToQuery = days || 30;
     const start = new Date(end.getTime() - (daysToQuery * 24 * 60 * 60 * 1000));
-    
+
     // Use the exact format from working examples
     const offsetMinutes = end.getTimezoneOffset();
     const offsetHours = Math.floor(Math.abs(offsetMinutes) / 60);
     const offsetMins = Math.abs(offsetMinutes) % 60;
     const offsetSign = offsetMinutes <= 0 ? '+' : '-';
     const offsetStr = `${offsetSign}${offsetHours.toString().padStart(2, '0')}:${offsetMins.toString().padStart(2, '0')}`;
-    
+
     // Set start time to beginning of the day
     const startOfDay = new Date(start);
     startOfDay.setHours(0, 0, 0, 0);
-    
+
     return {
       start: startOfDay.toISOString().slice(0, 19) + offsetStr,
-      end: end.toISOString().slice(0, 19) + offsetStr
+      end: end.toISOString().slice(0, 19) + offsetStr,
     };
   }
 
@@ -154,7 +160,7 @@ export class AiGatewayAnalyticsService {
    */
   private async executeQuery(query: GraphQLQuery): Promise<QueryResult> {
     const startTime = Date.now();
-    
+
     try {
       const response = await fetch(this.config.graphqlEndpoint, {
         method: 'POST',
@@ -172,7 +178,7 @@ export class AiGatewayAnalyticsService {
         throw new AnalyticsError(
           `HTTP ${response.status}: ${errorText}`,
           'HTTP_ERROR',
-          response.status
+          response.status,
         );
       }
 
@@ -184,7 +190,7 @@ export class AiGatewayAnalyticsService {
         throw new AnalyticsError(
           error.message || 'GraphQL query failed',
           error.extensions?.code || 'GRAPHQL_ERROR',
-          error.extensions?.code === 'authz' ? 403 : 500
+          error.extensions?.code === 'authz' ? 403 : 500,
         );
       }
 
@@ -194,19 +200,19 @@ export class AiGatewayAnalyticsService {
       };
     } catch (error) {
       const responseTime = Date.now() - startTime;
-      
+
       if (error instanceof AnalyticsError) {
         return {
           data: null,
           responseTime,
-          error: error.message
+          error: error.message,
         };
       }
-      
+
       return {
         data: null,
         responseTime,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       };
     }
   }
@@ -220,7 +226,7 @@ export class AiGatewayAnalyticsService {
       gateway: this.config.gateway,
       start: timeRange.start,
       end: timeRange.end,
-      limit: 1
+      limit: 1,
     };
 
     let filterClause = '';
@@ -232,7 +238,9 @@ export class AiGatewayAnalyticsService {
         filterClause = 'metadataKeys_has: "chatId",';
         break;
       case 'specific':
-        if (!filterId) throw new AnalyticsError('Filter ID required for specific queries', 'MISSING_FILTER_ID', 400);
+        if (!filterId) {
+          throw new AnalyticsError('Filter ID required for specific queries', 'MISSING_FILTER_ID', 400);
+        }
         filterClause = `metadataValues_has: "${filterId}",`;
         break;
       case 'total':
@@ -280,7 +288,7 @@ export class AiGatewayAnalyticsService {
           }
           __typename
         }
-      }`
+      }`,
     };
   }
 
@@ -292,7 +300,7 @@ export class AiGatewayAnalyticsService {
       throw new AnalyticsError(
         result.error || 'No analytics data available',
         'NO_DATA',
-        404
+        404,
       );
     }
 
@@ -312,7 +320,7 @@ export class AiGatewayAnalyticsService {
       uncachedTokensIn,
       uncachedTokensOut,
       cachedTokensIn,
-      cachedTokensOut
+      cachedTokensOut,
     } = totalRequests.sum;
 
     const totalTokensIn = uncachedTokensIn + cachedTokensIn;
@@ -332,10 +340,10 @@ export class AiGatewayAnalyticsService {
       lastRequestAt: lastRequest?.dimensions?.ts || null,
       latestHourActivity: latestRequests ? {
         count: latestRequests.count,
-        timestamp: latestRequests.dimensions.ts
+        timestamp: latestRequests.dimensions.ts,
       } : null,
       timeRange,
-      queryResponseTime: result.responseTime
+      queryResponseTime: result.responseTime,
     };
   }
 
@@ -346,7 +354,7 @@ export class AiGatewayAnalyticsService {
    */
   async getUserAnalytics(userId: string, days?: number): Promise<UserAnalyticsData> {
     this.logger.info('Getting user analytics', { userId, days: days || '30 days (default)' });
-    
+
     const timeRange = this.getTimeRange(days);
     const query = this.buildQuery('specific', timeRange, userId);
     const result = await this.executeQuery(query);
@@ -354,7 +362,7 @@ export class AiGatewayAnalyticsService {
 
     return {
       ...analyticsData,
-      userId
+      userId,
     };
   }
 
@@ -365,7 +373,7 @@ export class AiGatewayAnalyticsService {
    */
   async getChatAnalytics(chatId: string, days?: number): Promise<ChatAnalyticsData> {
     this.logger.info('Getting chat analytics', { chatId, days: days || '30 days (default)' });
-    
+
     const timeRange = this.getTimeRange(days);
     const query = this.buildQuery('specific', timeRange, chatId);
     const result = await this.executeQuery(query);
@@ -373,7 +381,7 @@ export class AiGatewayAnalyticsService {
 
     return {
       ...analyticsData,
-      chatId
+      chatId,
     };
   }
 
@@ -383,11 +391,11 @@ export class AiGatewayAnalyticsService {
    */
   async getTotalAnalytics(days?: number): Promise<AnalyticsData> {
     this.logger.info('Getting total analytics', { days: days || '30 days (default)' });
-    
+
     const timeRange = this.getTimeRange(days);
     const query = this.buildQuery('total', timeRange);
     const result = await this.executeQuery(query);
-    
+
     return this.processAnalyticsResponse(result, timeRange);
   }
 }

@@ -5,7 +5,7 @@
  * These types define the bindings and environment variables available to Workers.
  */
 
-import { D1Database, KVNamespace, R2Bucket, Ai } from '@cloudflare/workers-types'
+import { D1Database, KVNamespace, R2Bucket, Ai, DurableObjectNamespace } from '@cloudflare/workers-types'
 
 // Base environment interface that all workers extend
 export interface BaseEnv {
@@ -33,7 +33,7 @@ export interface CoreEnv extends BaseEnv {
   // Storage
   TEMPLATES_BUCKET: R2Bucket
   VibecoderStore: KVNamespace
-  
+
   // Service bindings
   ORCHESTRATOR?: any
   AGENT_FACTORY?: any
@@ -71,6 +71,10 @@ export interface CoreEnv extends BaseEnv {
   GITHUB_API_KEY: string
   CORE_GITHUB_API: string
   ORCHESTRATOR_BASE_URL?: string
+  HEALTH_WORKER_TARGETS?: string
+  WORKER_NAME?: string
+  WORKER_TYPE?: string
+  AGENT_SHARED_KV?: KVNamespace
 }
 
 // Environment for GitHub operations

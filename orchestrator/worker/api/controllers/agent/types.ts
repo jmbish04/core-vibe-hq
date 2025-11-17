@@ -1,4 +1,4 @@
-import { PreviewType } from "../../../services/sandbox/sandboxTypes";
+import { PreviewType } from '../../../services/sandbox/sandboxTypes';
 import type { ImageAttachment } from '../../../types/image-attachment';
 
 export interface CodeGenArgs {
@@ -20,4 +20,3 @@ export interface AgentConnectionData {
 
 export interface AgentPreviewResponse extends PreviewType {
 }
-    

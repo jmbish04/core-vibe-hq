@@ -10,6 +10,7 @@ import AppsPage from './routes/apps';
 import AppView from './routes/app';
 import DiscoverPage from './routes/discover';
 import { ProtectedRoute } from './routes/protected-route';
+import MissionControl from './routes/mission-control';
 
 const routes = [
 	{
@@ -43,6 +44,12 @@ const routes = [
 			{
 				path: 'discover',
 				Component: DiscoverPage,
+			},
+			{
+				path: 'mission-control',
+				element: React.createElement(ProtectedRoute, {
+					children: React.createElement(MissionControl),
+				}),
 			},
 		],
 	},

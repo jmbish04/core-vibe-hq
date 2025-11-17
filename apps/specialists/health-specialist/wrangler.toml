@@ -1,0 +1,72 @@
+name = "health-specialist"
+main = "worker/src/index.ts"
+compatibility_date = "2025-11-03"
+compatibility_flags = ["nodejs_compat_v2"]
+
+# Observability
+[observability]
+enabled = true
+head_sampling_rate = 1.0
+
+# AI binding for health analysis
+[ai]
+binding = "AI"
+
+# Orchestrator health database RPC binding
+[[services]]
+binding = "ORCHESTRATOR_HEALTH"
+service = "vibehq-orchestrator"
+entrypoint = "HealthOps"
+
+# Durable Objects for WebSocket handling
+[durable_objects]
+bindings = [
+  { name = "HEALTH_WEBSOCKET", class_name = "HealthWebSocket" }
+]
+
+# Migrations
+[[migrations]]
+tag = "v1"
+new_classes = ["HealthWebSocket"]
+
+# Scheduled cron job for daily health checks
+[[schedules]]
+cron = "0 2 * * *"  # Daily at 2 AM UTC
+function = "scheduled"
+
+# Development settings
+[dev]
+local_protocol = "http"
+port = 8788
+
+# Build settings
+[build]
+command = "npm run build"
+
+# Environment variables (can be overridden per environment)
+[vars]
+HEALTH_CHECK_TIMEOUT = "300"
+MAX_CONCURRENT_TESTS = "5"
+AI_MODEL_DEFAULT = "@cf/meta/llama-3.1-8b-instruct"
+LOG_LEVEL = "info"
+
+# Service bindings to orchestrator (for cross-worker communication)
+[[services]]
+binding = "ORCHESTRATOR_DATA"
+service = "vibehq-orchestrator"
+entrypoint = "DataOps"
+
+[[services]]
+binding = "ORCHESTRATOR_PROJECTS"
+service = "vibehq-orchestrator"
+entrypoint = "ProjectsOps"
+
+[[services]]
+binding = "ORCHESTRATOR_CHATS"
+service = "vibehq-orchestrator"
+entrypoint = "ChatsOps"
+
+[[services]]
+binding = "ORCHESTRATOR_HEALTH"
+service = "vibehq-orchestrator"
+entrypoint = "HealthOps"

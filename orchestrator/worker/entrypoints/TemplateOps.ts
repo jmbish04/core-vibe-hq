@@ -2,10 +2,10 @@
  * orchestrator/worker/entrypoints/TemplateOps.ts
  * ------------------------------------------------------------
  * Template Management RPC Entrypoint
- * 
+ *
  * Provides RPC methods for managing template files and placeholders.
  * Exposed via service binding for downstream factory workers.
- * 
+ *
  * Responsibilities:
  * - CRUD operations for template files (insert/update/soft delete)
  * - CRUD operations for template placeholders
@@ -15,9 +15,9 @@
  * (Kysely-enabled)
  */
 
-import type { CoreEnv } from '@shared/types/env'
-import { BaseWorkerEntrypoint } from '@shared/base/workerEntrypoint'
-import { sql } from 'kysely'
+import type { CoreEnv } from '@shared/types/env';
+import { BaseWorkerEntrypoint } from '@shared/base/workerEntrypoint';
+import { sql } from 'kysely';
 
 export interface UpsertTemplateFileParams {
   factory_name: string
@@ -98,7 +98,7 @@ export class TemplateOps extends BaseWorkerEntrypoint<CoreEnv> {
           level: 'info',
           details: JSON.stringify(params),
         })
-        .execute()
+        .execute();
 
       // Check if template file exists using Kysely
       const existing = await this.db
@@ -107,7 +107,7 @@ export class TemplateOps extends BaseWorkerEntrypoint<CoreEnv> {
         .where('factory_name', '=', params.factory_name)
         .where('template_name', '=', params.template_name)
         .where('file_path', '=', params.file_path)
-        .executeTakeFirst()
+        .executeTakeFirst();
 
       if (existing) {
         // Update existing
@@ -119,9 +119,9 @@ export class TemplateOps extends BaseWorkerEntrypoint<CoreEnv> {
           })
           .where('id', '=', existing.id)
           .returning('id')
-          .executeTakeFirst()
+          .executeTakeFirst();
 
-        return { ok: true, id: updated?.id }
+        return { ok: true, id: updated?.id };
       } else {
         // Insert new
         const inserted = await this.db
@@ -133,12 +133,12 @@ export class TemplateOps extends BaseWorkerEntrypoint<CoreEnv> {
             is_active: params.is_active ?? true,
           })
           .returning('id')
-          .executeTakeFirst()
+          .executeTakeFirst();
 
-        return { ok: true, id: inserted?.id }
+        return { ok: true, id: inserted?.id };
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
+      const errorMessage = error instanceof Error ? error.message : String(error);
       await this.db
         .insertInto('operation_logs')
         .values({
@@ -147,8 +147,8 @@ export class TemplateOps extends BaseWorkerEntrypoint<CoreEnv> {
           level: 'error',
           details: JSON.stringify({ ...params, error: errorMessage }),
         })
-        .execute()
-      return { ok: false, error: errorMessage }
+        .execute();
+      return { ok: false, error: errorMessage };
     }
   }
 
@@ -165,7 +165,7 @@ export class TemplateOps extends BaseWorkerEntrypoint<CoreEnv> {
           level: 'info',
           details: JSON.stringify(params),
         })
-        .execute()
+        .execute();
 
       // Check if placeholder exists using Kysely
       const existing = await this.db
@@ -173,7 +173,7 @@ export class TemplateOps extends BaseWorkerEntrypoint<CoreEnv> {
         .selectAll()
         .where('template_file_id', '=', params.template_file_id)
         .where('placeholder_id', '=', params.placeholder_id)
-        .executeTakeFirst()
+        .executeTakeFirst();
 
       if (existing) {
         // Update existing
@@ -187,9 +187,9 @@ export class TemplateOps extends BaseWorkerEntrypoint<CoreEnv> {
           })
           .where('id', '=', existing.id)
           .returning('id')
-          .executeTakeFirst()
+          .executeTakeFirst();
 
-        return { ok: true, id: updated?.id }
+        return { ok: true, id: updated?.id };
       } else {
         // Insert new
         const inserted = await this.db
@@ -202,12 +202,12 @@ export class TemplateOps extends BaseWorkerEntrypoint<CoreEnv> {
             is_active: params.is_active ?? true,
           })
           .returning('id')
-          .executeTakeFirst()
+          .executeTakeFirst();
 
-        return { ok: true, id: inserted?.id }
+        return { ok: true, id: inserted?.id };
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
+      const errorMessage = error instanceof Error ? error.message : String(error);
       await this.db
         .insertInto('operation_logs')
         .values({
@@ -216,8 +216,8 @@ export class TemplateOps extends BaseWorkerEntrypoint<CoreEnv> {
           level: 'error',
           details: JSON.stringify({ ...params, error: errorMessage }),
         })
-        .execute()
-      return { ok: false, error: errorMessage }
+        .execute();
+      return { ok: false, error: errorMessage };
     }
   }
 
@@ -234,23 +234,23 @@ export class TemplateOps extends BaseWorkerEntrypoint<CoreEnv> {
           level: 'info',
           details: JSON.stringify(params),
         })
-        .execute()
+        .execute();
 
       let query = this.db
         .selectFrom('template_files')
         .selectAll()
         .where('factory_name', '=', params.factory_name)
-        .where('is_active', '=', 1)
+        .where('is_active', '=', 1);
 
       if (params.template_name) {
-        query = query.where('template_name', '=', params.template_name)
+        query = query.where('template_name', '=', params.template_name);
       }
 
-      const templates = await query.execute()
+      const templates = await query.execute();
 
-      return { ok: true, templates: templates as TemplateFile[] }
+      return { ok: true, templates: templates as TemplateFile[] };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
+      const errorMessage = error instanceof Error ? error.message : String(error);
       await this.db
         .insertInto('operation_logs')
         .values({
@@ -259,8 +259,8 @@ export class TemplateOps extends BaseWorkerEntrypoint<CoreEnv> {
           level: 'error',
           details: JSON.stringify({ ...params, error: errorMessage }),
         })
-        .execute()
-      return { ok: false, error: errorMessage }
+        .execute();
+      return { ok: false, error: errorMessage };
     }
   }
 
@@ -277,18 +277,18 @@ export class TemplateOps extends BaseWorkerEntrypoint<CoreEnv> {
           level: 'info',
           details: JSON.stringify(params),
         })
-        .execute()
+        .execute();
 
       const placeholders = await this.db
         .selectFrom('template_placeholders')
         .selectAll()
         .where('template_file_id', '=', params.template_file_id)
         .where('is_active', '=', 1)
-        .execute()
+        .execute();
 
-      return { ok: true, placeholders: placeholders as TemplatePlaceholder[] }
+      return { ok: true, placeholders: placeholders as TemplatePlaceholder[] };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
+      const errorMessage = error instanceof Error ? error.message : String(error);
       await this.db
         .insertInto('operation_logs')
         .values({
@@ -297,8 +297,8 @@ export class TemplateOps extends BaseWorkerEntrypoint<CoreEnv> {
           level: 'error',
           details: JSON.stringify({ ...params, error: errorMessage }),
         })
-        .execute()
-      return { ok: false, error: errorMessage }
+        .execute();
+      return { ok: false, error: errorMessage };
     }
   }
 
@@ -315,17 +315,17 @@ export class TemplateOps extends BaseWorkerEntrypoint<CoreEnv> {
           level: 'info',
           details: JSON.stringify(params),
         })
-        .execute()
+        .execute();
 
       const mappings = await this.db
         .selectFrom('order_placeholder_mappings')
         .selectAll()
         .where('order_id', '=', params.order_id)
-        .execute()
+        .execute();
 
-      return { ok: true, mappings: mappings as OrderPlaceholderMapping[] }
+      return { ok: true, mappings: mappings as OrderPlaceholderMapping[] };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
+      const errorMessage = error instanceof Error ? error.message : String(error);
       await this.db
         .insertInto('operation_logs')
         .values({
@@ -334,8 +334,8 @@ export class TemplateOps extends BaseWorkerEntrypoint<CoreEnv> {
           level: 'error',
           details: JSON.stringify({ ...params, error: errorMessage }),
         })
-        .execute()
-      return { ok: false, error: errorMessage }
+        .execute();
+      return { ok: false, error: errorMessage };
     }
   }
 }

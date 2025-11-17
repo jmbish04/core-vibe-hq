@@ -64,3 +64,12 @@ export type {
     ReceiveHealthCheckResultParams,
     ReceiveHealthCheckResultResponse,
 } from './entrypoints/orchestrator/health'
+export {
+    buildSharedAgentTools,
+    runSharedAgentWithTools,
+} from './sharedToolkit'
+export type {
+    SharedToolkitEnv,
+    BuildSharedToolsOptions,
+    RunSharedAgentOptions,
+} from './sharedToolkit'

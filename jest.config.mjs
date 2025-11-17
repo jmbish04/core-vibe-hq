@@ -1,7 +1,10 @@
 export default {
   testEnvironment: 'node',
-  extensionsToTreatAsEsm: ['.js'],
   transform: {},
+  haste: {
+    computeSha1: true,
+    throwOnModuleCollision: false
+  },
   // Redirect relative imports used by the copied Task Master tests
   moduleNameMapper: {
     '^@tmstaging/(.*)$': '<rootDir>/STAGING/claude-task-master/$1',

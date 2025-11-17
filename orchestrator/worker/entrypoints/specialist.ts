@@ -14,14 +14,14 @@
  * ------------------------------------------------------------
  */
 
-import type { CoreEnv } from '@shared/types/env'
-import { BaseWorkerEntrypoint } from '@shared/base/workerEntrypoint'
-import { 
-  OpsConflictResolutionsTable, 
-  OpsDeliveryReportsTable, 
-  OpsOrdersTable 
-} from '@shared/types/db'
-import { Selectable } from 'kysely'
+import type { CoreEnv } from '@shared/types/env';
+import { BaseWorkerEntrypoint } from '@shared/base/workerEntrypoint';
+import {
+  OpsConflictResolutionsTable,
+  OpsDeliveryReportsTable,
+  OpsOrdersTable,
+} from '@shared/types/db';
+import { Selectable } from 'kysely';
 
 export interface CreateConflictResolutionParams {
   repo: string
@@ -90,7 +90,7 @@ export class Specialist extends BaseWorkerEntrypoint<CoreEnv> {
         resolution_branch: params.resolution_branch || null,
       })
       .returning(['id', 'repo', 'pr_number', 'status', 'created_at'])
-      .executeTakeFirstOrThrow()
+      .executeTakeFirstOrThrow();
 
     // Log the operation
     await this.db
@@ -103,9 +103,9 @@ export class Specialist extends BaseWorkerEntrypoint<CoreEnv> {
         order_id: null,
         task_uuid: null,
       })
-      .execute()
+      .execute();
 
-    return result
+    return result;
   }
 
   /**
@@ -122,7 +122,7 @@ export class Specialist extends BaseWorkerEntrypoint<CoreEnv> {
       .updateTable('ops_conflict_resolutions')
       .set(updates)
       .where('id', '=', id)
-      .execute()
+      .execute();
 
     await this.db
       .insertInto('operation_logs')
@@ -134,7 +134,7 @@ export class Specialist extends BaseWorkerEntrypoint<CoreEnv> {
         order_id: null,
         task_uuid: null,
       })
-      .execute()
+      .execute();
   }
 
   /**
@@ -154,7 +154,7 @@ export class Specialist extends BaseWorkerEntrypoint<CoreEnv> {
         final_code_diff: params.final_code_diff || null,
       })
       .returning(['id', 'project_id', 'status', 'compliance_score', 'created_at'])
-      .executeTakeFirstOrThrow()
+      .executeTakeFirstOrThrow();
 
     await this.db
       .insertInto('operation_logs')
@@ -166,9 +166,9 @@ export class Specialist extends BaseWorkerEntrypoint<CoreEnv> {
         order_id: null,
         task_uuid: null,
       })
-      .execute()
+      .execute();
 
-    return result
+    return result;
   }
 
   /**
@@ -183,7 +183,7 @@ export class Specialist extends BaseWorkerEntrypoint<CoreEnv> {
         assigned_specialist: params.assigned_specialist || null,
       })
       .returning(['id', 'order_type', 'status', 'assigned_specialist', 'created_at'])
-      .executeTakeFirstOrThrow()
+      .executeTakeFirstOrThrow();
 
     await this.db
       .insertInto('operation_logs')
@@ -195,9 +195,9 @@ export class Specialist extends BaseWorkerEntrypoint<CoreEnv> {
         order_id: null,
         task_uuid: null,
       })
-      .execute()
+      .execute();
 
-    return result
+    return result;
   }
 
   /**
@@ -207,13 +207,13 @@ export class Specialist extends BaseWorkerEntrypoint<CoreEnv> {
     let query = this.db
       .selectFrom('ops_orders')
       .selectAll()
-      .where('status', '=', 'pending')
+      .where('status', '=', 'pending');
 
     if (order_type) {
-      query = query.where('order_type', '=', order_type)
+      query = query.where('order_type', '=', order_type);
     }
 
-    return query.execute()
+    return query.execute();
   }
 
   /**
@@ -226,16 +226,16 @@ export class Specialist extends BaseWorkerEntrypoint<CoreEnv> {
     processed_at?: string
     completed_at?: string
   }): Promise<void> {
-    const updateData: any = { ...updates }
+    const updateData: any = { ...updates };
     if (updates.result) {
-      updateData.result = JSON.stringify(updates.result)
+      updateData.result = JSON.stringify(updates.result);
     }
 
     await this.db
       .updateTable('ops_orders')
       .set(updateData)
       .where('id', '=', id)
-      .execute()
+      .execute();
 
     await this.db
       .insertInto('operation_logs')
@@ -247,7 +247,7 @@ export class Specialist extends BaseWorkerEntrypoint<CoreEnv> {
         order_id: null,
         task_uuid: null,
       })
-      .execute()
+      .execute();
   }
 
   /**
@@ -257,13 +257,13 @@ export class Specialist extends BaseWorkerEntrypoint<CoreEnv> {
     let query = this.db
       .selectFrom('ops_conflict_resolutions')
       .selectAll()
-      .where('repo', '=', repo)
+      .where('repo', '=', repo);
 
     if (pr_number !== undefined) {
-      query = query.where('pr_number', '=', pr_number)
+      query = query.where('pr_number', '=', pr_number);
     }
 
-    return query.execute()
+    return query.execute();
   }
 
   /**
@@ -275,7 +275,7 @@ export class Specialist extends BaseWorkerEntrypoint<CoreEnv> {
       .selectAll()
       .where('project_id', '=', project_id)
       .orderBy('created_at', 'desc')
-      .execute()
+      .execute();
   }
 
   async logSpecialistActivity(params: {
@@ -290,7 +290,7 @@ export class Specialist extends BaseWorkerEntrypoint<CoreEnv> {
     const detailsPayload = {
       identifier: params.identifier ?? null,
       ...(params.details ?? {}),
-    }
+    };
 
     await this.db
       .insertInto('operation_logs')
@@ -302,7 +302,7 @@ export class Specialist extends BaseWorkerEntrypoint<CoreEnv> {
         task_uuid: params.taskUuid ?? null,
         details: JSON.stringify(detailsPayload),
       })
-      .execute()
+      .execute();
   }
 
   async getSpecialistActivity(params: {
@@ -315,7 +315,7 @@ export class Specialist extends BaseWorkerEntrypoint<CoreEnv> {
     level: string
     details: Record<string, unknown>
   }>> {
-    const limit = params.limit ?? 25
+    const limit = params.limit ?? 25;
 
     const rows = await this.db
       .selectFrom('operation_logs')
@@ -323,21 +323,21 @@ export class Specialist extends BaseWorkerEntrypoint<CoreEnv> {
       .where('operation_logs.source', '=', `specialist.${params.specialist}`)
       .orderBy('operation_logs.created_at', 'desc')
       .limit(limit)
-      .execute()
+      .execute();
 
     return rows
       .map((row) => {
-        let parsed: Record<string, unknown> = {}
+        let parsed: Record<string, unknown> = {};
         if (row.details) {
           try {
-            parsed = JSON.parse(row.details as unknown as string) as Record<string, unknown>
+            parsed = JSON.parse(row.details as unknown as string) as Record<string, unknown>;
           } catch (error) {
-            parsed = { raw: row.details }
+            parsed = { raw: row.details };
           }
         }
 
         if (params.identifier && parsed.identifier !== params.identifier) {
-          return null
+          return null;
         }
 
         const createdAt = (row as Record<string, unknown>).createdAt;
@@ -350,16 +350,16 @@ export class Specialist extends BaseWorkerEntrypoint<CoreEnv> {
           timestamp = new Date().toISOString();
         }
 
-        const activity = (row as Record<string, unknown>).activity
-        const level = (row as Record<string, unknown>).level
+        const activity = (row as Record<string, unknown>).activity;
+        const level = (row as Record<string, unknown>).level;
 
         return {
           timestamp,
           activity: typeof activity === 'string' && activity.length > 0 ? activity : 'unknown',
           level: typeof level === 'string' && level.length > 0 ? level : 'info',
           details: parsed,
-        }
+        };
       })
-      .filter((entry): entry is { timestamp: string; activity: string; level: string; details: Record<string, unknown> } => entry !== null)
+      .filter((entry): entry is { timestamp: string; activity: string; level: string; details: Record<string, unknown> } => entry !== null);
   }
 }

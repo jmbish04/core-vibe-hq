@@ -176,13 +176,13 @@ export type ModelSelectionMode = 'platform' | 'byok' | 'custom';
 
 // Match chat FileType interface
 export interface FileType {
-	filePath: string;
-	fileContents: string;
-	explanation?: string;
-	isGenerating?: boolean;
-	needsFixing?: boolean;
-	hasErrors?: boolean;
-	language?: string;
+        filePath: string;
+        fileContents: string;
+        explanation?: string;
+        isGenerating?: boolean;
+        needsFixing?: boolean;
+        hasErrors?: boolean;
+        language?: string;
 }
 
 // Streaming response wrapper types for agent session creation
@@ -194,11 +194,11 @@ export interface StreamingResponse {
 export type AgentStreamingResponse = StreamingResponse;
 
 export {
-	type ImageAttachment, 
-	isSupportedImageType, 
-	MAX_IMAGE_SIZE_BYTES,
-	MAX_IMAGES_PER_MESSAGE,
-	SUPPORTED_IMAGE_MIME_TYPES
+        type ImageAttachment, 
+        isSupportedImageType, 
+        MAX_IMAGE_SIZE_BYTES,
+        MAX_IMAGES_PER_MESSAGE,
+        SUPPORTED_IMAGE_MIME_TYPES
 } from 'worker/types/image-attachment';
 
 // Auth types imported from worker

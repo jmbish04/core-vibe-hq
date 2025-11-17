@@ -173,6 +173,104 @@ interface HealthCheckSchedulesTable {
   updated_at: Generated<string>
 }
 
+// AI Provider Tables
+interface AIProviderAssignmentsTable {
+  id: Generated<number>
+  patch_id: string
+  provider_id: string
+  status: string
+  priority: Generated<number>
+  metadata: string | null
+  created_at: Generated<string>
+}
+
+interface AIProviderExecutionsTable {
+  id: Generated<number>
+  assignment_id: Generated<number>
+  started_at: string
+  completed_at: string | null
+  status: string
+  result: string | null
+  error_message: string | null
+  execution_time_ms: number
+  metadata: string | null
+}
+
+interface AIProviderConfigsTable {
+  id: Generated<number>
+  provider_id: string
+  config_type: string
+  config_data: string
+  is_active: Generated<boolean>
+  created_at: Generated<string>
+  updated_at: Generated<string>
+}
+
+// Health Monitoring Tables
+interface TestProfilesTable {
+  id: Generated<number>
+  name: string
+  description: string | null
+  category: string
+  target: string
+  enabled: Generated<boolean>
+  schedule: Generated<string>
+  timeout_seconds: Generated<number>
+  retry_attempts: Generated<number>
+  config: string | null // JSON
+  created_at: Generated<string>
+  updated_at: Generated<string>
+}
+
+interface TestResultsTable {
+  id: Generated<number>
+  test_profile_id: number
+  run_id: string
+  status: string
+  duration_ms: number | null
+  error_message: string | null
+  output: string | null // JSON
+  metrics: string | null // JSON
+  environment: Generated<string>
+  triggered_by: Generated<string>
+  started_at: string | null
+  completed_at: string | null
+  created_at: Generated<string>
+}
+
+interface AiLogsTable {
+  id: Generated<number>
+  test_result_id: number | null
+  model: string
+  provider: string
+  prompt: string | null
+  response: string | null
+  tokens_used: number | null
+  cost: number | null
+  latency_ms: number | null
+  success: Generated<boolean>
+  error_message: string | null
+  reasoning: string | null // JSON
+  metadata: string | null // JSON
+  created_at: Generated<string>
+}
+
+interface HealthSummariesTable {
+  id: Generated<number>
+  date: string
+  overall_status: string
+  total_tests: Generated<number>
+  passed_tests: Generated<number>
+  failed_tests: Generated<number>
+  skipped_tests: Generated<number>
+  average_latency: number | null
+  total_cost: number | null
+  ai_usage_count: Generated<number>
+  issues: string | null // JSON
+  recommendations: string | null // JSON
+  created_at: Generated<string>
+}
+
 export interface Database {
   orders: OrdersTable
   tasks: TasksTable
@@ -185,19 +283,33 @@ export interface Database {
   health_checks: HealthChecksTable
   worker_health_checks: WorkerHealthChecksTable
   health_check_schedules: HealthCheckSchedulesTable
+  test_profiles: TestProfilesTable
+  test_results: TestResultsTable
+  ai_logs: AiLogsTable
+  health_summaries: HealthSummariesTable
+  ai_provider_assignments: AIProviderAssignmentsTable
+  ai_provider_executions: AIProviderExecutionsTable
+  ai_provider_configs: AIProviderConfigsTable
 }
 
 // Export individual table types
-export type { 
-  OrdersTable, 
-  TasksTable, 
-  OperationLogsTable, 
-  ErrorEventsTable, 
+export type {
+  OrdersTable,
+  TasksTable,
+  OperationLogsTable,
+  ErrorEventsTable,
   FollowupsTable,
   OpsConflictResolutionsTable,
   OpsDeliveryReportsTable,
   OpsOrdersTable,
   HealthChecksTable,
   WorkerHealthChecksTable,
-  HealthCheckSchedulesTable
+  HealthCheckSchedulesTable,
+  TestProfilesTable,
+  TestResultsTable,
+  AiLogsTable,
+  HealthSummariesTable,
+  AIProviderAssignmentsTable,
+  AIProviderExecutionsTable,
+  AIProviderConfigsTable
 }

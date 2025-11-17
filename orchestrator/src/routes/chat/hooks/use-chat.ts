@@ -504,7 +504,7 @@ export function useChat({
 			} catch (error) {
 				logger.error('Error initializing code generation:', error);
 				if (error instanceof RateLimitExceededError) {
-					const rateLimitMessage = handleRateLimitError(error.details, onDebugMessage);
+					const rateLimitMessage = handleRateLimitError(error.details as any, onDebugMessage);
 					setMessages(prev => [...prev, rateLimitMessage]);
 				}
 			}

@@ -1,11 +1,11 @@
 /**
  * Kysely Schema for Factory Management
- * 
+ *
  * This schema uses Kysely for type-safe database queries.
  * Separate from the Drizzle schemas used elsewhere.
  */
 
-import { Kysely, Generated, ColumnType } from 'kysely'
+import { Kysely, Generated, ColumnType } from 'kysely';
 
 export interface DB {
   factories: {

@@ -32,61 +32,6 @@ app.post('/generate', async (c) => {
     // TODO: Refactor to use orchestrator service binding instead of direct DB access
     // For now, this will fail - need to create orchestrator entrypoint for database operations
     throw new Error('Database access must go through orchestrator service binding. Refactor needed.');
-    
-    /* 
-    // Initialize report generator
-    const reportGenerator = new ReportGenerator(c.env.AI, c.env.DB);
-
-    // Generate report
-    const report = await reportGenerator.generateReport(order);
-
-    // Determine version (increment if report exists)
-    const existingReport = await c.env.DB.prepare(
-      'SELECT version FROM ops_delivery_reports WHERE project_id = ? AND phase = ? ORDER BY version DESC LIMIT 1'
-    ).bind(order.project_id, order.phase || null).first<{ version: string }>();
-
-    let version = '1.0';
-    if (existingReport) {
-      const currentVersion = parseFloat(existingReport.version);
-      version = (currentVersion + 0.1).toFixed(1);
-    }
-
-    // Save to D1
-    const result = await c.env.DB.prepare(
-      `INSERT INTO ops_delivery_reports 
-       (project_id, phase, compliance_score, summary, issues, recommendations, 
-        original_order_spec, status, completed_at, version)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).bind(
-      order.project_id,
-      order.phase || null,
-      report.compliance_score,
-      report.summary,
-      JSON.stringify(report.issues),
-      JSON.stringify(report.recommendations),
-      order.original_order_spec,
-      'completed',
-      new Date().toISOString(),
-      version
-    ).run();
-
-    // Get the inserted record
-    const reportId = result.meta.last_row_id;
-    const savedReport = await c.env.DB.prepare(
-      'SELECT * FROM ops_delivery_reports WHERE id = ?'
-    ).bind(reportId).first<DeliveryReportRecord>();
-
-    return c.json({
-      success: true,
-      report: { /*
-        ...report,
-        id: reportId,
-        version,
-        status: 'completed',
-        created_at: savedReport?.created_at,
-        completed_at: savedReport?.completed_at
-      }
-    });
   } catch (error) {
     console.error('Delivery report generation failed:', error);
     
@@ -180,4 +125,3 @@ app.get('/reports/:projectId', async (c) => {
 });
 
 export default app;
-

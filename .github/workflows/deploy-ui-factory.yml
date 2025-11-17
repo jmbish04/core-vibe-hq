@@ -31,3 +31,11 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: apps/ui-factory
 
+      - name: Validate Deployment
+        run: ./scripts/validate-worker-deployment.sh ui-factory
+        env:
+          WORKER_NAME: ui-factory
+          WORKER_TYPE: factory
+          HEALTH_WORKER_TARGETS: ${{ secrets.HEALTH_WORKER_TARGETS }}
+          ORCHESTRATOR_URL: ${{ secrets.ORCHESTRATOR_URL }}
+

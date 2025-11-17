@@ -11,7 +11,7 @@ type AlterBlueprintArgs = {
 
 export function createAlterBlueprintTool(
   agent: CodingAgentInterface,
-  logger: StructuredLogger
+  logger: StructuredLogger,
 ): ToolDefinition<AlterBlueprintArgs, Blueprint> {
   return {
     type: 'function' as const,

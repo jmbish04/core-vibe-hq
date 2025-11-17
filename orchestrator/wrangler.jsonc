@@ -58,6 +58,19 @@
 			"service": "ops-delivery-report-specialist"
 		}
 	],
+	// Service bindings to entrypoints (for RPC calls from apps/ workers)
+	"services_entrypoints": [
+		{
+			"binding": "ORCHESTRATOR_PATCH",
+			"service": "vibehq-orchestrator",
+			"entrypoint": "PatchOps"
+		},
+		{
+			"binding": "ORCHESTRATOR_HEALTH",
+			"service": "vibehq-orchestrator",
+			"entrypoint": "HealthOps"
+		}
+	],
 	// Container configuration for sandbox services
 	"containers": [
 		{
@@ -134,6 +147,18 @@
 			{
 				"class_name": "DORateLimitStore",
 				"name": "DORateLimitStore"
+			},
+			{
+				"class_name": "TerminalServer",
+				"name": "TERMINAL_SERVER"
+			},
+			{
+				"class_name": "OpsMonitorBroadcastServer",
+				"name": "OPS_MONITOR_BROADCAST"
+			},
+			{
+				"class_name": "HealthCheckBroadcastServer",
+				"name": "HEALTH_CHECK_BROADCAST"
 			}
 		]
 	},
@@ -174,6 +199,13 @@
 			"custom_domain": true
 		}
 	],
+	// Cron triggers for scheduled tasks
+	"triggers": {
+		"crons": [
+			"0 2 * * *",    // Daily full scan at 2 AM
+			"0 */4 * * *"  // Incremental scans every 4 hours
+		]
+	},
 	// Environment variables
 	"vars": {
 		// Common environment variables
@@ -193,6 +225,9 @@
 		"GITHUB_REPO": "core-vibe-hq",
 		"GITHUB_API_KEY": "",
 		"CORE_GITHUB_API": "https://api.github.com",
-		"CORE_GITHUB_API_URL": "https://core-github-api.hacolby.workers.dev"
+		"CORE_GITHUB_API_URL": "https://core-github-api.hacolby.workers.dev",
+		"WORKER_NAME": "orchestrator",
+		"WORKER_TYPE": "control-plane",
+		"HEALTH_WORKER_TARGETS": ""
 	}
 }

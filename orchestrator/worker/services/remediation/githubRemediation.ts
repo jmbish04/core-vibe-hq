@@ -12,9 +12,9 @@
  * ------------------------------------------------------------
  */
 
-import type { Env } from '../../types'
-import { createDatabaseService } from '../../database/database'
-import { followups, operationLogs } from '../../database/ops/schema'
+import type { Env } from '../../types';
+import { createDatabaseService } from '../../database/database';
+import { followups, operationLogs } from '../../database/ops/schema';
 
 interface TreeEntry {
   path: string
@@ -73,22 +73,24 @@ export const githubRemediation = {
         ref: 'main',
         recursive: true,
       }),
-    })
-    if (!resp.ok) throw new Error(`GitHub tree request failed: ${resp.status}`)
-    const data = (await resp.json()) as TreeResponse
+    });
+    if (!resp.ok) {
+      throw new Error(`GitHub tree request failed: ${resp.status}`);
+    }
+    const data = (await resp.json()) as TreeResponse;
 
-    const target = e.file_path.split('/').pop()?.toLowerCase() || ''
+    const target = e.file_path.split('/').pop()?.toLowerCase() || '';
     const match = data.entries.find(
       (x) =>
         x.path.toLowerCase().includes(target) && x.type === 'blob',
-    )
+    );
 
     await logOp(env, e, 'github.findRenamedFile', match ? 'info' : 'warn', {
       target,
       found: !!match,
-    })
+    });
 
-    return match ? { found: true, new_path: match.path, confidence: 0.8 } : null
+    return match ? { found: true, new_path: match.path, confidence: 0.8 } : null;
   },
 
   /** 🩹 Attempt to reinsert a missing placeholder, commit & open PR */
@@ -96,7 +98,7 @@ export const githubRemediation = {
     const headers = {
       Authorization: `Bearer ${env.GITHUB_API_KEY}`,
       'Content-Type': 'application/json',
-    }
+    };
 
     const treeResp = await fetch(
       `${env.CORE_GITHUB_API}/api/tools/files/tree`,
@@ -110,21 +112,27 @@ export const githubRemediation = {
           path: e.file_path,
         }),
       },
-    )
+    );
 
-    if (!treeResp.ok) throw new Error(`Tree fetch failed for ${e.file_path}`)
-    const tree = (await treeResp.json()) as TreeResponse
-    const file = tree.entries?.find((f) => f.path === e.file_path)
-    if (!file) throw new Error(`File ${e.file_path} not found in repo`)
-    if (!file.url) throw new Error(`File ${e.file_path} has no URL`)
+    if (!treeResp.ok) {
+      throw new Error(`Tree fetch failed for ${e.file_path}`);
+    }
+    const tree = (await treeResp.json()) as TreeResponse;
+    const file = tree.entries?.find((f) => f.path === e.file_path);
+    if (!file) {
+      throw new Error(`File ${e.file_path} not found in repo`);
+    }
+    if (!file.url) {
+      throw new Error(`File ${e.file_path} has no URL`);
+    }
 
-    const raw = await fetch(file.url).then((r) => r.text())
-    const placeholder = e.placeholder || 'PLACEHOLDER_NOT_SPECIFIED'
+    const raw = await fetch(file.url).then((r) => r.text());
+    const placeholder = e.placeholder || 'PLACEHOLDER_NOT_SPECIFIED';
     const injected = raw.includes(placeholder)
       ? raw
-      : `${raw}\n\n// ${placeholder}\n###${placeholder}###`
+      : `${raw}\n\n// ${placeholder}\n###${placeholder}###`;
 
-    const b64 = btoa(injected)
+    const b64 = btoa(injected);
 
     const upsert = (await fetch(`${env.CORE_GITHUB_API}/api/tools/files/upsert`, {
       method: 'POST',
@@ -136,7 +144,7 @@ export const githubRemediation = {
         content: b64,
         message: `Auto-fix: insert placeholder ${e.placeholder} (task ${e.task_uuid})`,
       }),
-    }).then((r) => r.json())) as UpsertResponse
+    }).then((r) => r.json())) as UpsertResponse;
 
     const pr = (await fetch(`${env.CORE_GITHUB_API}/api/tools/prs/open`, {
       method: 'POST',
@@ -149,16 +157,16 @@ export const githubRemediation = {
         title: `Auto-fix missing placeholder ${e.placeholder}`,
         body: `Automated remediation for ${e.file_path}\nTask ${e.task_uuid}`,
       }),
-    }).then((r) => r.json())) as PRResponse
+    }).then((r) => r.json())) as PRResponse;
 
     const result = {
       patched: true,
       pr_url: pr.html_url,
       commit_sha: upsert.commit.sha,
-    }
+    };
 
-    await logOp(env, e, 'github.fixMissingPlaceholder', 'info', result)
-    return result
+    await logOp(env, e, 'github.fixMissingPlaceholder', 'info', result);
+    return result;
   },
 
   /** 🚨 Create issue and D1 followup if remediation failed */
@@ -166,7 +174,7 @@ export const githubRemediation = {
     const headers = {
       Authorization: `Bearer ${env.GITHUB_API_KEY}`,
       'Content-Type': 'application/json',
-    }
+    };
 
     const resp = await fetch(`${env.CORE_GITHUB_API}/api/tools/issues/create`, {
       method: 'POST',
@@ -178,9 +186,9 @@ export const githubRemediation = {
         body: `${note}\n\nTask: ${e.task_uuid}\nOrder: ${e.order_id}`,
         labels: ['blocked', e.error_code],
       }),
-    }).then((r) => r.json())
+    }).then((r) => r.json());
 
-    const db = createDatabaseService(env as Env)
+    const db = createDatabaseService(env as Env);
     await db.ops.insert(followups).values({
       orderId: e.order_id ?? null,
       taskUuid: e.task_uuid ?? null,
@@ -189,12 +197,12 @@ export const githubRemediation = {
       status: 'open',
       note,
       data: resp,
-    })
+    });
 
-    await logOp(env, e, 'github.createIssue', 'error', resp)
-    return resp
+    await logOp(env, e, 'github.createIssue', 'error', resp);
+    return resp;
   },
-}
+};
 
 /** Internal helper for logging every GitHub remediation step */
 async function logOp(
@@ -204,7 +212,7 @@ async function logOp(
   level: string,
   details: any,
 ) {
-  const db = createDatabaseService(env as Env)
+  const db = createDatabaseService(env as Env);
   await db.ops.insert(operationLogs).values({
     source: 'github-remediation',
     orderId: e.order_id ?? null,
@@ -212,5 +220,5 @@ async function logOp(
     operation,
     level,
     details: details ?? {},
-  })
+  });
 }

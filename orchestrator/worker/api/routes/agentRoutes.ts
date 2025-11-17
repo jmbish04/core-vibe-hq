@@ -3,12 +3,12 @@
  * Handles agent interactions via HTTP and WebSocket
  */
 
-import { Hono } from 'hono'
-import { ProjectClarificationAgent } from '../../agents/project-clarification'
-import type { Env } from '../../types'
-import type { UserMessageInput } from '../../agents/project-clarification/types'
+import { Hono } from 'hono';
+import { ProjectClarificationAgent } from '../../agents/project-clarification';
+import type { Env } from '../../types';
+import type { UserMessageInput } from '../../agents/project-clarification/types';
 
-const app = new Hono<{ Bindings: Env }>()
+const app = new Hono<{ Bindings: Env }>();
 
 /**
  * POST /api/agents/project-clarification/message
@@ -16,8 +16,8 @@ const app = new Hono<{ Bindings: Env }>()
  */
 app.post('/project-clarification/message', async (c) => {
   try {
-    const input: UserMessageInput = await c.req.json()
-    
+    const input: UserMessageInput = await c.req.json();
+
     // TODO: Get structured logger from context
     // For now, using console logger
     const logger = {
@@ -25,7 +25,7 @@ app.post('/project-clarification/message', async (c) => {
       warn: (msg: string, data?: unknown) => console.warn(`[WARN] ${msg}`, data),
       error: (msg: string, data?: unknown) => console.error(`[ERROR] ${msg}`, data),
       debug: (msg: string, data?: unknown) => console.debug(`[DEBUG] ${msg}`, data),
-    } as any
+    } as any;
 
     const agent = new ProjectClarificationAgent(
       c.env,
@@ -34,23 +34,23 @@ app.post('/project-clarification/message', async (c) => {
         projectId: input.projectId,
         userId: input.userId,
         conversationId: input.conversationId,
-      }
-    )
+      },
+    );
 
-    const response = await agent.execute(input)
-    
+    const response = await agent.execute(input);
+
     return c.json({
       success: true,
       data: response,
-    })
+    });
   } catch (error: any) {
-    console.error('Agent message processing failed:', error)
-    return c.json({ 
+    console.error('Agent message processing failed:', error);
+    return c.json({
       success: false,
-      error: error.message || 'Internal server error' 
-    }, 500)
+      error: error.message || 'Internal server error',
+    }, 500);
   }
-})
+});
 
 /**
  * GET /api/agents/project-clarification/card/:projectId
@@ -58,22 +58,22 @@ app.post('/project-clarification/message', async (c) => {
  */
 app.get('/project-clarification/card/:projectId', async (c) => {
   try {
-    const projectId = c.req.param('projectId')
-    const conversationId = c.req.query('conversationId')
-    
+    const projectId = c.req.param('projectId');
+    const conversationId = c.req.query('conversationId');
+
     // TODO: Implement card retrieval
     return c.json({
       success: true,
       message: 'Card retrieval not yet implemented',
-    })
+    });
   } catch (error: any) {
-    console.error('Card retrieval failed:', error)
-    return c.json({ 
+    console.error('Card retrieval failed:', error);
+    return c.json({
       success: false,
-      error: error.message || 'Internal server error' 
-    }, 500)
+      error: error.message || 'Internal server error',
+    }, 500);
   }
-})
+});
 
 /**
  * WebSocket endpoint for real-time updates
@@ -81,5 +81,5 @@ app.get('/project-clarification/card/:projectId', async (c) => {
  * This will be integrated with the main WebSocket handler in app.ts
  */
 
-export { app as agentRoutes }
+export { app as agentRoutes };
 

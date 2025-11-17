@@ -18,9 +18,7 @@ import {
   DEFAULT_MONITORING_OPTIONS,
   DEFAULT_STORAGE_OPTIONS,
   DEFAULT_LOG_STORE_OPTIONS,
-  getDataDirectory,
-  getErrorDbPath,
-  getLogDbPath
+  getDataDirectory
 } from './types.js';
 
 class SafeJSON {
@@ -494,13 +492,13 @@ class ErrorCommands {
     limit?: number;
     offset?: number;
     format?: 'json' | 'table' | 'raw';
-    dbPath?: string;
     reset?: boolean;
   }): Promise<void> {
     let storage: StorageManager | null = null;
     
     try {
-      storage = new StorageManager(options.dbPath);
+      // StorageManager now uses orchestrator client - dbPath parameter removed
+      storage = new StorageManager(process.env);
       const result = storage.getErrors(options.instanceId);
       
       if (!result.success) {
@@ -603,8 +601,9 @@ class ErrorCommands {
     }
   }
 
-  static async stats(options: { instanceId: string; dbPath?: string }): Promise<void> {
-    const storage = new StorageManager(options.dbPath);
+  static async stats(options: { instanceId: string }): Promise<void> {
+    // StorageManager now uses orchestrator client - dbPath parameter removed
+    const storage = new StorageManager(process.env);
     
     try {
       const result = storage.getErrorSummary(options.instanceId);
@@ -634,13 +633,14 @@ class ErrorCommands {
     }
   }
 
-  static async clear(options: { instanceId: string; confirm: boolean; dbPath?: string }): Promise<void> {
+  static async clear(options: { instanceId: string; confirm: boolean }): Promise<void> {
     if (!options.confirm) {
       OutputFormatter.formatError('--confirm flag required to clear errors');
       process.exit(1);
     }
 
-    const storage = new StorageManager(options.dbPath);
+    // StorageManager now uses orchestrator client - dbPath parameter removed
+    const storage = new StorageManager(process.env);
     
     try {
       const result = storage.clearErrors(options.instanceId);
@@ -690,9 +690,9 @@ class LogCommands {
     limit?: number;
     offset?: number;
     format?: 'json' | 'table' | 'raw';
-    dbPath?: string;
   }): Promise<void> {
-    const storage = new StorageManager(undefined, options.dbPath);
+    // StorageManager now uses orchestrator client - dbPath parameter removed
+    const storage = new StorageManager(process.env);
     
     try {
       const filter: LogFilter = {
@@ -889,8 +889,9 @@ class LogCommands {
     return filteredLines.join('\n');
   }
 
-  static async stats(options: { instanceId: string; dbPath?: string }): Promise<void> {
-    const storage = new StorageManager(undefined, options.dbPath);
+  static async stats(options: { instanceId: string }): Promise<void> {
+    // StorageManager now uses orchestrator client - dbPath parameter removed
+    const storage = new StorageManager(process.env);
     
     try {
       const result = storage.getLogStats(options.instanceId);
@@ -920,13 +921,14 @@ class LogCommands {
     }
   }
 
-  static async clear(options: { instanceId: string; confirm: boolean; dbPath?: string }): Promise<void> {
+  static async clear(options: { instanceId: string; confirm: boolean }): Promise<void> {
     if (!options.confirm) {
       OutputFormatter.formatError('--confirm flag required to clear logs');
       process.exit(1);
     }
 
-    const storage = new StorageManager(undefined, options.dbPath);
+    // StorageManager now uses orchestrator client - dbPath parameter removed
+    const storage = new StorageManager(process.env);
     
     try {
       const result = storage.clearLogs(options.instanceId);
@@ -1033,7 +1035,7 @@ GLOBAL OPTIONS:
 
   --instance-id, -i <id>     Instance identifier (required for most commands)
   --format <format>          Output format: json (default), table, raw
-  --db-path <path>           Custom database path
+  --orchestrator-url <url>   Orchestrator base URL (default: from ORCHESTRATOR_URL env)
   --help, -h                 Show help message
 
 PROCESS START OPTIONS:
@@ -1077,25 +1079,29 @@ EXAMPLES:
 Environment Variables:
   INSTANCE_ID               Default instance identifier
   PORT                      Port for the application
-  CLI_DATA_DIR              Data directory path (default: ./data)
-  CLI_ERROR_DB_PATH         Error database path (default: <CLI_DATA_DIR>/errors.db)
-  CLI_LOG_DB_PATH           Log database path (default: <CLI_DATA_DIR>/logs.db)
+  CLI_DATA_DIR              Data directory path for file logs (default: ./.data)
+  ORCHESTRATOR_URL          Orchestrator base URL for database operations (required)
+  WORKER_NAME               Worker identifier for orchestrator (required)
+  CONTAINER_NAME            Container identifier (optional)
   
-Database Storage:
-  Errors: ${getErrorDbPath()} (configurable via CLI_ERROR_DB_PATH)
-  Logs:   ${getLogDbPath()} (configurable via CLI_LOG_DB_PATH)
-  Data:   ${getDataDirectory()} (configurable via CLI_DATA_DIR)
+Storage:
+  All monitoring data (errors, logs, processes) is stored in orchestrator D1 database.
+  No local SQLite databases are used. File logs are temporary and stored in CLI_DATA_DIR.
+  Configure ORCHESTRATOR_URL, WORKER_NAME, and optionally CONTAINER_NAME for orchestrator integration.
 `);
 }
 
 function initializeDataDirectory(): void {
+  // Only create directory for file-based logs (SimpleLogManager)
+  // Database operations go to orchestrator D1 - no local SQLite databases
   const fs = require('fs');
   const dataDir = getDataDirectory();
   
   try {
     if (!fs.existsSync(dataDir)) {
       fs.mkdirSync(dataDir, { recursive: true });
-      console.log(`Created data directory: ${dataDir}`);
+      console.log(`Created data directory for file logs: ${dataDir}`);
+      console.log(`Note: All database operations route to orchestrator D1`);
     }
   } catch (error) {
     console.warn(`Failed to create data directory ${dataDir}:`, error);
@@ -1113,8 +1119,11 @@ async function main() {
         // Global options
         'instance-id': { type: 'string', short: 'i' },
         'format': { type: 'string' },
-        'db-path': { type: 'string' },
+        'orchestrator-url': { type: 'string' },
         'help': { type: 'boolean', short: 'h' },
+        
+        // Server options
+        'hostname': { type: 'string' },
         
         // Process options
         'cwd': { type: 'string', short: 'c' },
@@ -1154,6 +1163,10 @@ async function main() {
 
     // Route to appropriate command handler
     switch (command) {
+      case 'server':
+        await handleServerCommand(args);
+        break;
+        
       case 'process':
         await handleProcessCommand(subcommand, args, positionals.slice(2));
         break;
@@ -1243,7 +1256,7 @@ async function handleErrorCommand(subcommand: string, args: Record<string, unkno
         limit: args.limit ? parseInt(String(args.limit)) : undefined,
         offset: args.offset ? parseInt(String(args.offset)) : undefined,
         format: args.format as 'json' | 'table' | 'raw',
-        dbPath: args['db-path'] ? String(args['db-path']) : undefined,
+        // dbPath removed - using orchestrator client from environment
         reset: Boolean(args.reset)
       });
       break;
@@ -1256,7 +1269,6 @@ async function handleErrorCommand(subcommand: string, args: Record<string, unkno
       
       await ErrorCommands.stats({
         instanceId: String(args['instance-id']),
-        dbPath: args['db-path'] ? String(args['db-path']) : undefined
       });
       break;
       
@@ -1269,7 +1281,6 @@ async function handleErrorCommand(subcommand: string, args: Record<string, unkno
       await ErrorCommands.clear({
         instanceId: String(args['instance-id']),
         confirm: Boolean(args.confirm),
-        dbPath: args['db-path'] ? String(args['db-path']) : undefined
       });
       break;
       
@@ -1296,7 +1307,6 @@ async function handleLogCommand(subcommand: string, args: Record<string, unknown
         limit: args.limit ? parseInt(String(args.limit)) : undefined,
         offset: args.offset ? parseInt(String(args.offset)) : undefined,
         format: args.format as 'json' | 'table' | 'raw',
-        dbPath: args['db-path'] ? String(args['db-path']) : undefined
       });
       break;
       
@@ -1322,7 +1332,6 @@ async function handleLogCommand(subcommand: string, args: Record<string, unknown
       
       await LogCommands.stats({
         instanceId: String(args['instance-id']),
-        dbPath: args['db-path'] ? String(args['db-path']) : undefined
       });
       break;
       
@@ -1335,7 +1344,6 @@ async function handleLogCommand(subcommand: string, args: Record<string, unknown
       await LogCommands.clear({
         instanceId: String(args['instance-id']),
         confirm: Boolean(args.confirm),
-        dbPath: args['db-path'] ? String(args['db-path']) : undefined
       });
       break;
       
@@ -1351,6 +1359,309 @@ if (process.argv[1] && process.argv[1].endsWith('cli-tools.ts')) {
     OutputFormatter.formatError(`Unhandled error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     process.exit(1);
   });
+}
+
+/**
+ * HTTP Server for REST API and WebSocket endpoints
+ * Exposes /api/monitoring/cli/* and /ws/monitoring endpoints
+ */
+async function handleServerCommand(args: Record<string, unknown>): Promise<void> {
+  const port = args.port ? parseInt(String(args.port)) : 3000;
+  const hostname = args.hostname ? String(args.hostname) : '0.0.0.0';
+
+  console.log(`Starting container monitoring server on ${hostname}:${port}`);
+  console.log(`REST API: http://${hostname}:${port}/api/monitoring/cli/*`);
+  console.log(`WebSocket: ws://${hostname}:${port}/ws/monitoring`);
+
+  // Initialize storage with orchestrator client
+  const storage = new StorageManager(process.env);
+
+  // Active WebSocket connections for monitoring
+  const websockets = new Set<WebSocket>();
+
+  // Start HTTP server with Bun
+  const server = Bun.serve({
+    hostname,
+    port,
+    async fetch(request) {
+      const url = new URL(request.url);
+
+      // WebSocket upgrade
+      if (url.pathname === '/ws/monitoring' && request.headers.get('Upgrade') === 'websocket') {
+        return handleWebSocketUpgrade(request, websockets, storage);
+      }
+
+      // REST API endpoints
+      if (url.pathname.startsWith('/api/monitoring/cli/')) {
+        return handleRestApi(request, url, storage);
+      }
+
+      // Health check
+      if (url.pathname === '/health') {
+        return new Response(JSON.stringify({ status: 'ok', service: 'container-monitoring' }), {
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      return new Response('Not Found', { status: 404 });
+    },
+  });
+
+  console.log(`Server started on http://${hostname}:${port}`);
+  
+  // Keep process alive
+  process.on('SIGINT', () => {
+    console.log('\nShutting down server...');
+    websockets.forEach(ws => {
+      try {
+        ws.close();
+      } catch (e) {
+        // Ignore errors
+      }
+    });
+    server.stop();
+    storage.close();
+    process.exit(0);
+  });
+
+  // Keep running
+  await new Promise(() => {});
+}
+
+function handleWebSocketUpgrade(
+  request: Request,
+  websockets: Set<WebSocket>,
+  storage: StorageManager
+): Response {
+  const upgradeHeader = request.headers.get('Upgrade');
+  if (!upgradeHeader || upgradeHeader !== 'websocket') {
+    return new Response('Expected Upgrade: websocket', { status: 426 });
+  }
+
+  // Create WebSocket pair (Bun supports WebSocketPair)
+  const webSocketPair = new WebSocketPair();
+  const [client, server] = Object.values(webSocketPair);
+
+  server.accept();
+  websockets.add(server);
+
+  // Handle WebSocket messages
+  server.addEventListener('message', async (event) => {
+    try {
+      const message = JSON.parse(event.data as string);
+      await handleWebSocketMessage(server, message, storage, websockets);
+    } catch (error: any) {
+      server.send(JSON.stringify({
+        success: false,
+        error: error.message || 'Unknown error',
+      }));
+    }
+  });
+
+  server.addEventListener('close', () => {
+    websockets.delete(server);
+  });
+
+  server.addEventListener('error', (error) => {
+    console.error('WebSocket error:', error);
+    websockets.delete(server);
+  });
+
+  // Send welcome message
+  server.send(JSON.stringify({
+    success: true,
+    type: 'connected',
+    message: 'WebSocket connection established',
+  }));
+
+  return new Response(null, {
+    status: 101,
+    webSocket: client,
+  });
+}
+
+async function handleWebSocketMessage(
+  ws: WebSocket,
+  message: any,
+  storage: StorageManager,
+  websockets: Set<WebSocket>
+): Promise<void> {
+  const { id, type, command, instanceId, ...params } = message;
+
+  try {
+    let result: any;
+
+    switch (type) {
+      case 'process:start':
+        // Start process via ProcessCommands
+        await ProcessCommands.start({
+          instanceId: instanceId || params.instanceId || `instance-${Date.now()}`,
+          command: params.command,
+          args: params.args || [],
+          cwd: params.cwd,
+          port: params.port,
+          maxRestarts: params.maxRestarts,
+          restartDelay: params.restartDelay,
+          maxErrors: params.maxErrors,
+          retentionDays: params.retentionDays,
+          logRetentionHours: params.logRetentionHours,
+        });
+        result = { success: true, message: 'Process started' };
+        break;
+
+      case 'process:stop':
+        await ProcessCommands.stop({ instanceId });
+        result = { success: true, message: 'Process stopped' };
+        break;
+
+      case 'process:status':
+        const status = await ProcessCommands.status({ instanceId });
+        result = { success: true, data: status };
+        break;
+
+      case 'errors:list':
+        const errorsResult = await storage.getErrors(instanceId);
+        result = errorsResult.success
+          ? { success: true, data: errorsResult.data }
+          : { success: false, error: errorsResult.error?.message };
+        break;
+
+      case 'logs:get':
+        const logsResult = await storage.getLogs({ instanceId, ...params });
+        result = logsResult.success
+          ? { success: true, data: logsResult.data }
+          : { success: false, error: logsResult.error?.message };
+        break;
+
+      case 'subscribe':
+        // Subscribe to real-time updates
+        result = { success: true, message: 'Subscribed to updates' };
+        // Could set up event listeners here to stream updates
+        break;
+
+      default:
+        result = { success: false, error: `Unknown command type: ${type}` };
+    }
+
+    ws.send(JSON.stringify({
+      id,
+      ...result,
+    }));
+  } catch (error: any) {
+    ws.send(JSON.stringify({
+      id,
+      success: false,
+      error: error.message || 'Unknown error',
+    }));
+  }
+}
+
+async function handleRestApi(
+  request: Request,
+  url: URL,
+  storage: StorageManager
+): Promise<Response> {
+  const path = url.pathname.replace('/api/monitoring/cli', '');
+  const method = request.method;
+
+  try {
+    // Process commands
+    if (path.startsWith('/process')) {
+      if (method === 'POST' && path.includes('/start')) {
+        const body = await request.json();
+        const instanceId = body.instanceId || `instance-${Date.now()}`;
+        
+        await ProcessCommands.start({
+          instanceId,
+          command: body.command,
+          args: body.args || [],
+          cwd: body.cwd,
+          port: body.port,
+          maxRestarts: body.maxRestarts,
+          restartDelay: body.restartDelay,
+          maxErrors: body.maxErrors,
+          retentionDays: body.retentionDays,
+          logRetentionHours: body.logRetentionHours,
+        });
+
+        return Response.json({ success: true, instanceId });
+      }
+
+      if (method === 'POST' && path.includes('/stop')) {
+        const body = await request.json();
+        await ProcessCommands.stop({ instanceId: body.instanceId });
+        return Response.json({ success: true });
+      }
+
+      if (method === 'GET' && path.includes('/status')) {
+        const instanceId = url.searchParams.get('instanceId');
+        if (!instanceId) {
+          return Response.json({ error: 'instanceId required' }, { status: 400 });
+        }
+        const status = await ProcessCommands.status({ instanceId });
+        return Response.json({ success: true, data: status });
+      }
+    }
+
+    // Error commands
+    if (path.startsWith('/errors')) {
+      if (method === 'GET' && path.includes('/list')) {
+        const instanceId = url.searchParams.get('instanceId');
+        if (!instanceId) {
+          return Response.json({ error: 'instanceId required' }, { status: 400 });
+        }
+        const result = await storage.getErrors(instanceId);
+        return result.success
+          ? Response.json({ success: true, data: result.data })
+          : Response.json({ success: false, error: result.error?.message }, { status: 500 });
+      }
+
+      if (method === 'GET' && path.includes('/stats')) {
+        const instanceId = url.searchParams.get('instanceId');
+        if (!instanceId) {
+          return Response.json({ error: 'instanceId required' }, { status: 400 });
+        }
+        const result = await storage.getErrorSummary(instanceId);
+        return result.success
+          ? Response.json({ success: true, data: result.data })
+          : Response.json({ success: false, error: result.error?.message }, { status: 500 });
+      }
+    }
+
+    // Log commands
+    if (path.startsWith('/logs')) {
+      if (method === 'GET' && path.includes('/get')) {
+        const instanceId = url.searchParams.get('instanceId');
+        if (!instanceId) {
+          return Response.json({ error: 'instanceId required' }, { status: 400 });
+        }
+        const filter: LogFilter = {
+          instanceId,
+          limit: url.searchParams.get('limit') ? parseInt(url.searchParams.get('limit')!) : undefined,
+          offset: url.searchParams.get('offset') ? parseInt(url.searchParams.get('offset')!) : undefined,
+        };
+        const result = await storage.getLogs(filter);
+        return result.success
+          ? Response.json({ success: true, data: result.data })
+          : Response.json({ success: false, error: result.error?.message }, { status: 500 });
+      }
+
+      if (method === 'GET' && path.includes('/stats')) {
+        const instanceId = url.searchParams.get('instanceId');
+        if (!instanceId) {
+          return Response.json({ error: 'instanceId required' }, { status: 400 });
+        }
+        const result = await storage.getLogStats(instanceId);
+        return result.success
+          ? Response.json({ success: true, data: result.data })
+          : Response.json({ success: false, error: result.error?.message }, { status: 500 });
+      }
+    }
+
+    return Response.json({ error: 'Not found' }, { status: 404 });
+  } catch (error: any) {
+    return Response.json({ error: error.message || 'Internal server error' }, { status: 500 });
+  }
 }
 
 export { ProcessCommands, ErrorCommands, LogCommands, OutputFormatter };

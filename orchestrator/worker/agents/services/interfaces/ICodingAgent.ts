@@ -1,12 +1,12 @@
-import { FileOutputType, Blueprint, FileConceptType } from "worker/agents/schemas";
-import { BaseSandboxService } from "worker/services/sandbox/BaseSandboxService";
-import { ExecuteCommandsResponse, PreviewType, StaticAnalysisResponse, RuntimeError } from "worker/services/sandbox/sandboxTypes";
-import { ProcessedImageAttachment } from "worker/types/image-attachment";
-import { OperationOptions } from "worker/agents/operations/common";
-import { DeepDebugResult } from "worker/agents/core/types";
-import { RenderToolCall } from "worker/agents/operations/UserConversationProcessor";
-import { WebSocketMessageType, WebSocketMessageData } from "worker/api/websocketTypes";
-import { GitVersionControl } from "worker/agents/git/git";
+import { FileOutputType, Blueprint, FileConceptType } from 'worker/agents/schemas';
+import { BaseSandboxService } from 'worker/services/sandbox/BaseSandboxService';
+import { ExecuteCommandsResponse, PreviewType, StaticAnalysisResponse, RuntimeError } from 'worker/services/sandbox/sandboxTypes';
+import { ProcessedImageAttachment } from 'worker/types/image-attachment';
+import { OperationOptions } from 'worker/agents/operations/common';
+import { DeepDebugResult } from 'worker/agents/core/types';
+import { RenderToolCall } from 'worker/agents/operations/UserConversationProcessor';
+import { WebSocketMessageType, WebSocketMessageData } from 'worker/api/websocketTypes';
+import { GitVersionControl } from 'worker/agents/git/git';
 
 export abstract class ICodingAgent {
     abstract getSandboxServiceClient(): BaseSandboxService;
@@ -34,7 +34,7 @@ export abstract class ICodingAgent {
     abstract runStaticAnalysisCode(files?: string[]): Promise<StaticAnalysisResponse>;
 
     abstract execCommands(commands: string[], shouldSave: boolean, timeout?: number): Promise<ExecuteCommandsResponse>;
-    
+
     abstract regenerateFileByPath(path: string, issues: string[]): Promise<{ path: string; diff: string }>;
 
     abstract generateFiles(

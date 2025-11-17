@@ -16,6 +16,28 @@
     "local_protocol": "http"
   },
   
+  // Durable Objects for ORM Agents
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "NEW_WORKER_ORM_AGENT",
+        "class_name": "NewWorkerORMAgent"
+      },
+      {
+        "name": "RETROFIT_ORM_AGENT",
+        "class_name": "RetrofitORMAgent"
+      }
+    ]
+  },
+
+  // Durable Object Migrations
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["NewWorkerORMAgent", "RetrofitORMAgent"]
+    }
+  ],
+
   // Data Factory specific environment variables
   "vars": {
     "FACTORY_TYPE": "data",

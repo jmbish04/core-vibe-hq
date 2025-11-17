@@ -196,6 +196,11 @@ export class ProcessMonitor extends EventEmitter {
 
       await this.simpleLogManager.appendLog(`Process started: ${this.processInfo.command} ${this.processInfo.args?.join(' ') || ''}`, 'stdout').catch(() => {});
 
+      // Store process info in orchestrator
+      await this.storage.storeProcessInfo(this.processInfo).catch(err => {
+        console.warn('Failed to store process info in orchestrator:', err);
+      });
+
       this.emit('process_started', {
         type: 'process_started',
         processId: this.processInfo.id,
@@ -241,6 +246,16 @@ export class ProcessMonitor extends EventEmitter {
 
       this.setState('stopped');
 
+      // Update process info and store in orchestrator
+      this.processInfo = {
+        ...this.processInfo,
+        endTime: new Date(),
+        status: 'stopped'
+      };
+      await this.storage.storeProcessInfo(this.processInfo).catch(err => {
+        console.warn('Failed to store process info in orchestrator:', err);
+      });
+
       // Emit stop event
       this.emit('process_stopped', {
         type: 'process_stopped',
@@ -266,18 +281,24 @@ export class ProcessMonitor extends EventEmitter {
   private setupProcessMonitoring(): void {
     if (!this.childProcess) return;
 
-    this.childProcess.on('exit', (code, signal) => {
+    this.childProcess.on('exit', async (code, signal) => {
       // Update process info
       this.processInfo = {
         ...this.processInfo,
         exitCode: code ?? undefined,
-        endTime: new Date()
+        endTime: new Date(),
+        status: code === 0 ? 'stopped' : 'crashed'
       };
       
       const wasUnexpected = this.state === 'running';
       const wasStopping = this.state === 'stopping';
       
       this.setState('stopped');
+
+      // Store process info update in orchestrator
+      await this.storage.storeProcessInfo(this.processInfo).catch(err => {
+        console.warn('Failed to store process info in orchestrator:', err);
+      });
 
       this.simpleLogManager.appendLog(`Process exited with code ${code}${signal ? ` (signal: ${signal})` : ''}`, 'stdout').catch(() => {});
 
@@ -299,6 +320,16 @@ export class ProcessMonitor extends EventEmitter {
         if (code !== 0 || shouldRestart) {
           this.setState('crashed');
           
+          // Update process info for crash
+          this.processInfo = {
+            ...this.processInfo,
+            status: 'crashed',
+            lastError: `Process crashed: exit code ${code}${signal ? `, signal ${signal}` : ''}`
+          };
+          await this.storage.storeProcessInfo(this.processInfo).catch(err => {
+            console.warn('Failed to store process info in orchestrator:', err);
+          });
+          
           this.emit('process_crashed', {
             type: 'process_crashed',
             processId: this.processInfo.id,
@@ -316,14 +347,20 @@ export class ProcessMonitor extends EventEmitter {
       }
     });
 
-    this.childProcess.on('error', (error) => {
+    this.childProcess.on('error', async (error) => {
       console.error(`Process ${this.processInfo.id} error:`, error);
       
       this.processInfo = {
         ...this.processInfo,
-        lastError: error.message
+        lastError: error.message,
+        status: 'crashed'
       };
       this.setState('crashed');
+
+      // Store process info update in orchestrator
+      await this.storage.storeProcessInfo(this.processInfo).catch(err => {
+        console.warn('Failed to store process info in orchestrator:', err);
+      });
 
       this.simpleLogManager.appendLog(`Process error: ${error.message}`, 'stderr').catch(() => {});
       
@@ -334,11 +371,13 @@ export class ProcessMonitor extends EventEmitter {
         rawOutput: error.stack || error.message
       };
       
-      this.storage.storeError(
+      await this.storage.storeError(
         this.processInfo.instanceId,
         this.processInfo.id,
         simpleError
-      );
+      ).catch(err => {
+        console.warn('Failed to store error in orchestrator:', err);
+      });
     });
   }
 
@@ -398,7 +437,7 @@ export class ProcessMonitor extends EventEmitter {
           rawOutput: line
         };
 
-        const storeResult = this.storage.storeError(
+        const storeResult = await this.storage.storeError(
           this.processInfo.instanceId,
           this.processInfo.id,
           simpleError

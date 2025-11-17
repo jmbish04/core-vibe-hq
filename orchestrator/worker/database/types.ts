@@ -216,7 +216,7 @@ export interface AppStats {
 // ========================================
 
 /**
- * Raw Secret data for storage (before encryption)  
+ * Raw Secret data for storage (before encryption)
  */
 export interface SecretData extends Omit<schema.UserSecret, 'encryptedValue' | 'id' | 'isActive' | 'createdAt' | 'updatedAt' | 'lastUsed' | 'userId' | 'usageCount' | 'keyPreview' > {
     value: string;
@@ -306,11 +306,11 @@ export interface ErrorWithMessage {
  * Type guard to check if error is an object with message
  */
 export function isErrorWithMessage(error: unknown): error is ErrorWithMessage {
-    return (
-        typeof error === 'object' &&
+  return (
+    typeof error === 'object' &&
         error !== null &&
         ('message' in error || ('error' in error && typeof (error as Record<string, unknown>).error === 'object'))
-    );
+  );
 }
 
 // ========================================

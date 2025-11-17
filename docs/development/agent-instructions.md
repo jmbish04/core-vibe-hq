@@ -175,6 +175,23 @@ docs/
 
 ### ⚠️ CRITICAL: Every Worker Must Have a Deploy Workflow
 
+## GitHub Actions Workflows
+
+**Default workflows that should be included in all repositories:**
+
+### PR Comment Summary (`.github/workflows/pr-comment-summary.yml`)
+- **Purpose**: Automatically extracts and summarizes PR comments for better feedback visibility
+- **Triggers**: On issue comments and PR review comments
+- **Features**:
+  - Filters out comments from specified users (e.g., 'jmbish04')
+  - Batches comments with 30-second delay
+  - Extracts both discussion comments and inline code review comments
+  - Cleans text by removing badges, slash commands, and bot mentions
+  - Posts cleaned summary as PR comment
+- **Why included**: Improves PR feedback visibility and reduces noise from automated comments
+
+### Deployment Workflows
+
 **Every worker in this project MUST have a corresponding GitHub Actions workflow file in `.github/workflows/`:**
 
 - ✅ **Orchestrator**: `.github/workflows/deploy-orchestrator.yml`

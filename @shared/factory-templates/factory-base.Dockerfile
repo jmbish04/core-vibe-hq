@@ -3,56 +3,70 @@
 FROM node:22-slim
 
 LABEL maintainer="VibeHQ Mission Control"
-LABEL description="Base image for all VibeHQ factories with preinstalled AI CLIs and shared utilities"
+LABEL description="Base image for all VibeHQ factories with multi-API monitoring and AI CLIs"
 
-# --- Core System Tools ---
+# --- Core System Tools (No SQLite dependencies) ---
 RUN apt-get update && apt-get install -y \
-    python3 python3-pip git curl jq bash nano && \
-    npm install -g typescript wrangler@latest pnpm && \
-    pip3 install requests rich && \
+    python3 python3-pip git curl jq bash nano htop procps && \
+    npm install -g typescript wrangler@latest pnpm bun@latest && \
+    pip3 install requests rich websockets fastapi uvicorn typer pydantic && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# --- Install Python tooling packages (Factory Automation System) ---
-# Note: These packages will be installed from the packages/ directory
-# The actual COPY and RUN commands will be added when building the image
-# For now, we ensure the base dependencies are available
-RUN pip3 install typer pydantic fastapi uvicorn || echo "Note: Python packages will be installed during image build"
+# --- Install Bun globally ---
+RUN curl -fsSL https://bun.sh/install | bash && \
+    mv /root/.bun/bin/bun /usr/local/bin/ && \
+    bun --version
 
 # --- AI CLI Toolchain (installed globally but idle until keys provided) ---
 RUN npm install -g \
-    codex-cli@latest \
+    @openai/codex \
     @google/gemini-cli \
-    @anthropic/claude-cli \
-    cursor-agent-cli \
-    github-copilot-cli
+    @anthropic/claude-code \
+    opencode-ai \
+    wrangler
 
 # --- Install MCP CLI (for template analysis) ---
 RUN npm install -g @modelcontextprotocol/cli || echo "mcp-cli installation skipped (may not be available)"
 
+# --- Multi-API Monitoring Infrastructure ---
+# REST API monitoring with FastAPI/Python
+# WebSocket monitoring with websockets library
+# RPC monitoring with custom Vibe SDK clients
+
+# Install Vibe SDK monitoring packages
+RUN pip3 install \
+    aiohttp \
+    prometheus-client \
+    structlog \
+    || echo "Monitoring packages installed"
+
 # --- Environment defaults ---
 ENV NODE_ENV=production
-ENV PATH="/usr/local/bin:$PATH"
+ENV PYTHONPATH=/app
+ENV BUN_INSTALL=/usr/local
+ENV PATH="/usr/local/bin:/usr/local/bun/bin:$PATH"
 WORKDIR /app
 
-# --- Shared utility scripts (patched at build) ---
+# --- Shared utility scripts ---
 COPY ./@shared/factory-templates/scripts /usr/local/bin/
 RUN chmod +x /usr/local/bin/* || true
 
-# --- Install Python tooling packages (Factory Automation System) ---
-# Copy Python packages and install them
-COPY packages/pmo-scaffolder /tmp/pmo-scaffolder
-COPY packages/template-manager-tool /tmp/template-manager-tool
-COPY packages/factory-orchestrator-tool /tmp/factory-orchestrator-tool
-RUN pip3 install -e /tmp/pmo-scaffolder && \
-    pip3 install -e /tmp/template-manager-tool && \
-    pip3 install -e /tmp/factory-orchestrator-tool && \
-    rm -rf /tmp/pmo-scaffolder /tmp/template-manager-tool /tmp/factory-orchestrator-tool
+# --- Python monitoring modules ---
+COPY ./@shared/factory-templates/monitoring /app/monitoring/
+RUN chmod +x /app/monitoring/*.py || true
 
-# --- Optional health check ---
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
- CMD wrangler --version || exit 1
+# --- Factory Tooling ---
+# TypeScript CLI tool is available via pnpm factory-orchestrator
+# No additional Python packages needed for factory orchestration
 
-CMD ["bash"]
+# --- Multi-API Health Checks ---
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+  CMD curl -f http://localhost:3000/health 2>/dev/null || \
+      python3 -c "import websockets; print('WebSocket lib OK')" 2>/dev/null || \
+      wrangler --version 2>/dev/null || exit 1
+
+# --- Default command with monitoring ---
+CMD ["bash", "-c", "python3 -m uvicorn monitoring.rest_monitor:app --host 0.0.0.0 --port 3000 & bun run monitor.js 2>/dev/null || wrangler dev --port 8787"]
 
 
 

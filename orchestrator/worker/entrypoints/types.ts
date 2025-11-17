@@ -6,8 +6,8 @@
  * ------------------------------------------------------------
  */
 
-import { Selectable } from 'kysely'
-import { Database, TasksTable } from '@shared/types/db'
+import { Selectable } from 'kysely';
+import { Database, TasksTable } from '@shared/types/db';
 
 // --- GitHub ---
 export interface UpsertFileResponse {

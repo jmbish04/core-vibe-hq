@@ -59,6 +59,11 @@
       "entrypoint": "Specialist"
     },
     {
+      "binding": "ORCHESTRATOR_OPS_MONITOR",
+      "service": "vibehq-orchestrator",
+      "entrypoint": "OpsMonitorOps"
+    },
+    {
       "binding": "ORCHESTRATOR_HEALTH_CHECK",
       "service": "vibehq-orchestrator",
       "entrypoint": "Health"

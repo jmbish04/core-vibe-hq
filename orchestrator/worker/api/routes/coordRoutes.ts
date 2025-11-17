@@ -1,15 +1,15 @@
 /**
  * Coordinate Resolver API Routes
- * 
+ *
  * Provides HTTP endpoints for resolving file coordinates (anchors/markers)
  * for surgical patching operations.
  */
 
-import { Hono } from 'hono'
-import { coreGithub, CoreGithubEnv } from '../../integrations/coreGithub'
-import { resolveCoords, type ResolveRequest } from '../../utils/coordResolver'
-import { Kysely, D1Dialect } from 'kysely'
-import type { DB } from '../../db/schema'
+import { Hono } from 'hono';
+import { coreGithub, CoreGithubEnv } from '../../integrations/coreGithub';
+import { resolveCoords, type ResolveRequest } from '../../utils/coordResolver';
+import { Kysely, D1Dialect } from 'kysely';
+import type { DB } from '../../db/schema';
 
 type Ctx = {
   Bindings: {
@@ -21,7 +21,7 @@ type Ctx = {
   }
 }
 
-export const coordsApi = new Hono<Ctx>()
+export const coordsApi = new Hono<Ctx>();
 
 /**
  * POST /api/coords/resolve
@@ -37,31 +37,31 @@ coordsApi.post('/resolve', async (c) => {
       beginId?: string
       endId?: string
       includeMarkers?: boolean
-    }>()
+    }>();
 
     if (!body?.path || !body?.mode) {
-      return c.json({ ok: false, error: 'path and mode required' }, 400)
+      return c.json({ ok: false, error: 'path and mode required' }, 400);
     }
 
     const env: CoreGithubEnv = {
       CORE_GITHUB_API: c.env.CORE_GITHUB_API,
       GITHUB_API_KEY: c.env.GITHUB_API_KEY,
       GITHUB_OWNER: c.env.GITHUB_OWNER,
-      GITHUB_REPO: c.env.GITHUB_REPO
-    }
+      GITHUB_REPO: c.env.GITHUB_REPO,
+    };
 
-    const { text } = await coreGithub.content(env, body.path, body.ref ?? 'main')
+    const { text } = await coreGithub.content(env, body.path, body.ref ?? 'main');
     const res = resolveCoords({
       text,
       mode: body.mode,
       anchor: body.anchor,
       beginId: body.beginId,
       endId: body.endId,
-      includeMarkers: body.includeMarkers
-    })
+      includeMarkers: body.includeMarkers,
+    });
 
     // Log operation
-    const db = new Kysely<DB>({ dialect: new D1Dialect({ database: c.env.DB_OPS }) })
+    const db = new Kysely<DB>({ dialect: new D1Dialect({ database: c.env.DB_OPS }) });
     await db.insertInto('operation_logs').values({
       source: 'orchestrator',
       operation: 'coords.resolve',
@@ -72,16 +72,16 @@ coordsApi.post('/resolve', async (c) => {
         anchor: body.anchor,
         beginId: body.beginId,
         endId: body.endId,
-        result: res
-      })
-    }).executeTakeFirst()
+        result: res,
+      }),
+    }).executeTakeFirst();
 
-    return c.json(res)
+    return c.json(res);
   } catch (e: any) {
-    console.error('Failed to resolve coordinates:', e)
-    return c.json({ ok: false, error: String(e?.message ?? e) }, 500)
+    console.error('Failed to resolve coordinates:', e);
+    return c.json({ ok: false, error: String(e?.message ?? e) }, 500);
   }
-})
+});
 
 
 

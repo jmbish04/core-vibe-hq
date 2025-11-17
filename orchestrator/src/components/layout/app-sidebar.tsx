@@ -11,6 +11,7 @@ import {
 	Bookmark,
 	// LayoutGrid,
 	Compass,
+	Radar,
 } from 'lucide-react';
 import './sidebar-overrides.css';
 import { useRecentApps, useFavoriteApps, useApps } from '@/hooks/use-apps';
@@ -256,12 +257,28 @@ export function AppSidebar() {
 							<div className="absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-bg-2 to-transparent pointer-events-none z-10"></div>
 							{/* Navigation */}
 							<SidebarGroup>
-								{expandedGroups.includes('apps') && (
-									<SidebarGroupContent>
-										{/* Search */}
-										<div className="relative bg-bg-3 mb-4 mt-2">
-											<Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
-											<Input
+						{expandedGroups.includes('apps') && (
+							<SidebarGroupContent>
+								<SidebarMenu className="mb-4">
+									<SidebarMenuItem>
+										<SidebarMenuButton
+											onClick={() => navigate('/mission-control')}
+											tooltip="Mission Control"
+											className="group hover:opacity-80 hover:cursor-pointer hover:bg-bg-1/50 transition-all duration-200"
+										>
+											<Radar className="h-5 w-5 text-text-primary/60 group-hover:text-primary/80 transition-colors" />
+											{!isCollapsed && (
+												<span className="text-text-primary/80 font-medium group-hover:text-primary transition-colors">
+													Mission Control
+												</span>
+											)}
+										</SidebarMenuButton>
+									</SidebarMenuItem>
+								</SidebarMenu>
+								{/* Search */}
+								<div className="relative bg-bg-3 mb-4 mt-2">
+									<Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
+									<Input
 												placeholder="Search apps..."
 												value={searchQuery}
 												onChange={(e) =>

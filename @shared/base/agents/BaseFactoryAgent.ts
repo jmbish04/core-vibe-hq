@@ -11,6 +11,7 @@
  */
 
 import { BaseAgent, StructuredLogger, AgentContext } from './BaseAgent'
+import { buildSwarmPrompt, type SwarmPromptOptions, type ComposedPrompt } from '@shared/base/prompts'
 import type { CoreEnv, BaseEnv } from '@shared/types/env'
 
 /**
@@ -93,6 +94,21 @@ export abstract class BaseFactoryAgent extends BaseAgent {
    * Get the factory type identifier
    */
   abstract getFactoryType(): string
+
+  /**
+   * Compose the swarm prompt tailored for the current factory.
+   *
+   * Factories can override this for additional customization, but most agents can rely on the
+   * centralized prompt repository to combine the Cloudflare base, swarm base, and factory extension.
+   */
+  protected composeFactorySwarmPrompt(
+    options: Omit<SwarmPromptOptions, 'identifier'> = {}
+  ): ComposedPrompt {
+    return buildSwarmPrompt({
+      identifier: this.getFactoryType(),
+      ...options,
+    })
+  }
 
   /**
    * Execute subprocess command (for use in containers)

@@ -1,364 +1,546 @@
-/**
- * orchestrator/worker/entrypoints/HealthOps.ts
- * ------------------------------------------------------------
- * Health Database Operations RPC Entrypoint
- * 
- * Provides RPC methods for database operations on DB_HEALTH.
- * This entrypoint allows apps/ workers to access the health database
- * through the orchestrator service binding instead of direct D1 bindings.
- * 
- * Responsibilities:
- * - Health check operations (CRUD)
- * - Worker health check operations (CRUD)
- * - Health monitoring data operations
- * 
- * All operations use Drizzle ORM on DB_HEALTH database.
- * ------------------------------------------------------------
- */
-
-import type { CoreEnv } from '@shared/types/env';
 import { BaseWorkerEntrypoint } from '@shared/base/workerEntrypoint';
-import { createDatabaseService } from '../database/database';
-import { eq, and, desc, asc } from 'drizzle-orm';
-import * as schema from '../database/health/schema';
+import { DatabaseService } from '../database/database';
+import { HealthTestingService } from '../services/health/healthTestingService';
+import { OrchestratorHealthTest } from '../services/health/orchestratorHealthTest';
+import { AiService } from '../ai-providers/aiService';
+import type { Env } from '../types';
+import type {
+  TestProfile,
+  NewTestProfile,
+  TestResult,
+  NewTestResult,
+  AiLog,
+  NewAiLog,
+  HealthSummary,
+  NewHealthSummary
+} from '../database/schema';
 
-export interface HealthCheckResponse {
-    id: number;
-    healthCheckUuid: string;
-    triggerType: string;
-    triggerSource: string | null;
-    status: string;
-    totalWorkers: number;
-    completedWorkers: number;
-    passedWorkers: number;
-    failedWorkers: number;
-    overallHealthScore: number;
-    aiAnalysis: string | null;
-    aiRecommendations: string | null;
-    startedAt: number;
-    completedAt: number | null;
-    timeoutAt: number | null;
-    createdAt: number;
+export interface HealthOpsRequest {
+  // Test Profiles
+  getTestProfiles?: { enabledOnly?: boolean };
+  getTestProfileById?: { id: number };
+  createTestProfile?: { profile: NewTestProfile };
+  updateTestProfile?: { id: number; updates: Partial<NewTestProfile> };
+
+  // Test Results
+  createTestResult?: { result: NewTestResult };
+  updateTestResult?: { id: number; updates: Partial<NewTestResult> };
+  getTestResults?: { limit?: number; offset?: number };
+  getTestResultsByRunId?: { runId: string };
+  getTestResultsByProfile?: { profileId: number; limit?: number };
+
+  // AI Logs
+  createAiLog?: { log: NewAiLog };
+  getAiLogsByTestResult?: { testResultId: number };
+  getAiUsageStats?: { days?: number };
+
+  // Health Summaries
+  createHealthSummary?: { summary: NewHealthSummary };
+  getHealthSummaries?: { limit?: number };
+  getLatestHealthSummary?: {};
+
+  // Complex queries
+  getTestResultsWithProfiles?: { limit?: number };
+  getHealthDashboardData?: {};
+  cleanupOldData?: { daysToKeep?: number };
+
+  // Health Testing Service
+  testDependencySynchronization?: { context: any };
+  testInterWorkerCommunication?: {};
+  testWebSocketConnectivity?: {};
+  testBuildHealth?: {};
+
+  // Orchestrator Health Test Suite
+  runOrchestratorHealthTest?: {};
 }
 
-export interface WorkerHealthCheckResponse {
-    id: number;
-    workerCheckUuid: string;
-    healthCheckUuid: string;
-    workerName: string;
-    workerType: string;
-    workerUrl: string | null;
-    status: string;
-    overallStatus: string | null;
-    healthScore: number;
-    createdAt: number;
-    completedAt: number | null;
+export interface HealthOpsResponse {
+  // Test Profiles
+  testProfiles?: TestProfile[];
+  testProfile?: TestProfile;
+
+  // Test Results
+  testResult?: TestResult;
+  testResults?: TestResult[];
+  testResultsWithProfiles?: any[];
+
+  // AI Logs
+  aiLog?: AiLog;
+  aiLogs?: AiLog[];
+  aiUsageStats?: any[];
+
+  // Health Summaries
+  healthSummary?: HealthSummary;
+  healthSummaries?: HealthSummary[];
+  dashboardData?: any;
+
+  // Operations
+  cleanupResult?: { deletedResults: number; deletedLogs: string };
+
+  // Health Testing Service
+  healthTestResult?: any;
+
+  // Orchestrator Health Test Suite
+  orchestratorHealthReport?: any;
 }
 
-export interface PaginatedResponse<T> {
-    data: T[];
-    pagination: {
-        limit: number;
-        offset: number;
-        total: number;
-        hasMore: boolean;
+export class HealthOps extends BaseWorkerEntrypoint<Env> {
+  private get dbService(): DatabaseService {
+    return new DatabaseService(this.env);
+  }
+
+  private get healthTestingService(): HealthTestingService {
+    return new HealthTestingService(
+      new AiService(this.env),
+      this.dbService.health
+    );
+  }
+
+  private get orchestratorHealthTest(): OrchestratorHealthTest {
+    return new OrchestratorHealthTest(this.healthTestingService);
+  }
+
+  async handleRequest(request: HealthOpsRequest): Promise<HealthOpsResponse> {
+    // Test Profiles Operations
+    if (request.getTestProfiles) {
+      const profiles = await this.getTestProfiles(request.getTestProfiles.enabledOnly);
+      return { testProfiles: profiles };
+    }
+
+    if (request.getTestProfileById) {
+      const profile = await this.getTestProfileById(request.getTestProfileById.id);
+      return { testProfile: profile };
+    }
+
+    if (request.createTestProfile) {
+      const profile = await this.createTestProfile(request.createTestProfile.profile);
+      return { testProfile: profile };
+    }
+
+    if (request.updateTestProfile) {
+      await this.updateTestProfile(request.updateTestProfile.id, request.updateTestProfile.updates);
+      const updated = await this.getTestProfileById(request.updateTestProfile.id);
+      return { testProfile: updated };
+    }
+
+    // Test Results Operations
+    if (request.createTestResult) {
+      const result = await this.createTestResult(request.createTestResult.result);
+      return { testResult: result };
+    }
+
+    if (request.updateTestResult) {
+      await this.updateTestResult(request.updateTestResult.id, request.updateTestResult.updates);
+      // Don't return updated result to avoid extra query
+      return {};
+    }
+
+    if (request.getTestResults) {
+      const results = await this.getTestResults(
+        request.getTestResults.limit,
+        request.getTestResults.offset
+      );
+      return { testResults: results };
+    }
+
+    if (request.getTestResultsByRunId) {
+      const results = await this.getTestResultsByRunId(request.getTestResultsByRunId.runId);
+      return { testResults: results };
+    }
+
+    if (request.getTestResultsByProfile) {
+      const results = await this.getTestResultsByProfile(
+        request.getTestResultsByProfile.profileId,
+        request.getTestResultsByProfile.limit
+      );
+      return { testResults: results };
+    }
+
+    // AI Logs Operations
+    if (request.createAiLog) {
+      const log = await this.createAiLog(request.createAiLog.log);
+      return { aiLog: log };
+    }
+
+    if (request.getAiLogsByTestResult) {
+      const logs = await this.getAiLogsByTestResult(request.getAiLogsByTestResult.testResultId);
+      return { aiLogs: logs };
+    }
+
+    if (request.getAiUsageStats) {
+      const stats = await this.getAiUsageStats(request.getAiUsageStats.days);
+      return { aiUsageStats: stats };
+    }
+
+    // Health Summaries Operations
+    if (request.createHealthSummary) {
+      const summary = await this.createHealthSummary(request.createHealthSummary.summary);
+      return { healthSummary: summary };
+    }
+
+    if (request.getHealthSummaries) {
+      const summaries = await this.getHealthSummaries(request.getHealthSummaries.limit);
+      return { healthSummaries: summaries };
+    }
+
+    if (request.getLatestHealthSummary) {
+      const summary = await this.getLatestHealthSummary();
+      return { healthSummary: summary };
+    }
+
+    // Complex queries
+    if (request.getTestResultsWithProfiles) {
+      const results = await this.getTestResultsWithProfiles(request.getTestResultsWithProfiles.limit);
+      return { testResultsWithProfiles: results };
+    }
+
+    if (request.getHealthDashboardData) {
+      const data = await this.getHealthDashboardData();
+      return { dashboardData: data };
+    }
+
+    if (request.cleanupOldData) {
+      const result = await this.cleanupOldData(request.cleanupOldData.daysToKeep);
+      return { cleanupResult: result };
+    }
+
+    // Health Testing Service Operations
+    if (request.testDependencySynchronization) {
+      const result = await this.healthTestingService.testDependencySynchronization(
+        request.testDependencySynchronization.context
+      );
+      return { healthTestResult: result };
+    }
+
+    if (request.testInterWorkerCommunication) {
+      const result = await this.healthTestingService.testInterWorkerCommunication();
+      return { healthTestResult: result };
+    }
+
+    if (request.testWebSocketConnectivity) {
+      const result = await this.healthTestingService.testWebSocketConnectivity();
+      return { healthTestResult: result };
+    }
+
+    if (request.testBuildHealth) {
+      const result = await this.healthTestingService.testBuildHealth();
+      return { healthTestResult: result };
+    }
+
+    // Orchestrator Health Test Suite
+    if (request.runOrchestratorHealthTest) {
+      const report = await this.orchestratorHealthTest.runFullHealthTest();
+      return { orchestratorHealthReport: report };
+    }
+
+    throw new Error('Unknown health operation');
+  }
+
+  // Test Profiles Operations
+  private async getTestProfiles(enabledOnly = true): Promise<TestProfile[]> {
+    return this.dbService.kyselyHealth
+      .selectFrom('test_profiles')
+      .selectAll()
+      .$if(enabledOnly, qb => qb.where('enabled', '=', 1))
+      .orderBy('category')
+      .orderBy('name')
+      .execute();
+  }
+
+  private async getTestProfileById(id: number): Promise<TestProfile | undefined> {
+    return this.dbService.kyselyHealth
+      .selectFrom('test_profiles')
+      .selectAll()
+      .where('id', '=', id)
+      .executeTakeFirst();
+  }
+
+  private async createTestProfile(profile: NewTestProfile): Promise<TestProfile> {
+    const result = await this.dbService.kyselyHealth
+      .insertInto('test_profiles')
+      .values(profile)
+      .returning('id')
+      .executeTakeFirst();
+
+    if (!result?.id) {
+      throw new Error('Failed to create test profile');
+    }
+
+    const created = await this.getTestProfileById(result.id);
+    if (!created) {
+      throw new Error('Failed to retrieve created test profile');
+    }
+
+    return created;
+  }
+
+  private async updateTestProfile(id: number, updates: Partial<NewTestProfile>): Promise<void> {
+    await this.dbService.kyselyHealth
+      .updateTable('test_profiles')
+      .set({ ...updates, updatedAt: Date.now() })
+      .where('id', '=', id)
+      .execute();
+  }
+
+  // Test Results Operations
+  private async createTestResult(result: NewTestResult): Promise<TestResult> {
+    const dbResult = await this.dbService.kyselyHealth
+      .insertInto('test_results')
+      .values(result)
+      .returning('id')
+      .executeTakeFirst();
+
+    if (!dbResult?.id) {
+      throw new Error('Failed to create test result');
+    }
+
+    // Return the created result
+    const created = await this.dbService.kyselyHealth
+      .selectFrom('test_results')
+      .selectAll()
+      .where('id', '=', dbResult.id)
+      .executeTakeFirst();
+
+    if (!created) {
+      throw new Error('Failed to retrieve created test result');
+    }
+
+    return created;
+  }
+
+  private async updateTestResult(id: number, updates: Partial<NewTestResult>): Promise<void> {
+    await this.dbService.kyselyHealth
+      .updateTable('test_results')
+      .set(updates)
+      .where('id', '=', id)
+      .execute();
+  }
+
+  private async getTestResults(limit = 100, offset = 0): Promise<TestResult[]> {
+    return this.dbService.kyselyHealth
+      .selectFrom('test_results')
+      .selectAll()
+      .orderBy('createdAt', 'desc')
+      .limit(limit)
+      .offset(offset)
+      .execute();
+  }
+
+  private async getTestResultsByRunId(runId: string): Promise<TestResult[]> {
+    return this.dbService.kyselyHealth
+      .selectFrom('test_results')
+      .selectAll()
+      .where('runId', '=', runId)
+      .orderBy('startedAt', 'asc')
+      .execute();
+  }
+
+  private async getTestResultsByProfile(profileId: number, limit = 50): Promise<TestResult[]> {
+    return this.dbService.kyselyHealth
+      .selectFrom('test_results')
+      .selectAll()
+      .where('testProfileId', '=', profileId)
+      .orderBy('createdAt', 'desc')
+      .limit(limit)
+      .execute();
+  }
+
+  // AI Logs Operations
+  private async createAiLog(log: NewAiLog): Promise<AiLog> {
+    const result = await this.dbService.kyselyHealth
+      .insertInto('ai_logs')
+      .values(log)
+      .returning('id')
+      .executeTakeFirst();
+
+    if (!result?.id) {
+      throw new Error('Failed to create AI log');
+    }
+
+    const created = await this.dbService.kyselyHealth
+      .selectFrom('ai_logs')
+      .selectAll()
+      .where('id', '=', result.id)
+      .executeTakeFirst();
+
+    if (!created) {
+      throw new Error('Failed to retrieve created AI log');
+    }
+
+    return created;
+  }
+
+  private async getAiLogsByTestResult(testResultId: number): Promise<AiLog[]> {
+    return this.dbService.kyselyHealth
+      .selectFrom('ai_logs')
+      .selectAll()
+      .where('testResultId', '=', testResultId)
+      .orderBy('createdAt', 'asc')
+      .execute();
+  }
+
+  private async getAiUsageStats(days = 30): Promise<any[]> {
+    const cutoffDate = Date.now() - (days * 24 * 60 * 60 * 1000);
+
+    return this.dbService.kyselyHealth
+      .selectFrom('ai_logs')
+      .select([
+        'model',
+        'provider',
+        this.dbService.kyselyHealth.fn.count('id').as('totalRequests'),
+        this.dbService.kyselyHealth.fn.sum('tokensUsed').as('totalTokens'),
+        this.dbService.kyselyHealth.fn.sum('cost').as('totalCost'),
+        this.dbService.kyselyHealth.fn.avg('latencyMs').as('avgLatency')
+      ])
+      .where('createdAt', '>=', cutoffDate)
+      .where('success', '=', 1)
+      .groupBy(['model', 'provider'])
+      .orderBy('totalRequests', 'desc')
+      .execute();
+  }
+
+  // Health Summaries Operations
+  private async createHealthSummary(summary: NewHealthSummary): Promise<HealthSummary> {
+    const result = await this.dbService.kyselyHealth
+      .insertInto('health_summaries')
+      .values(summary)
+      .onConflict('date')
+      .doUpdateSet(summary)
+      .returning('id')
+      .executeTakeFirst();
+
+    if (!result?.id) {
+      throw new Error('Failed to create health summary');
+    }
+
+    const created = await this.getLatestHealthSummary();
+    if (!created) {
+      throw new Error('Failed to retrieve created health summary');
+    }
+
+    return created;
+  }
+
+  private async getHealthSummaries(limit = 30): Promise<HealthSummary[]> {
+    return this.dbService.kyselyHealth
+      .selectFrom('health_summaries')
+      .selectAll()
+      .orderBy('date', 'desc')
+      .limit(limit)
+      .execute();
+  }
+
+  private async getLatestHealthSummary(): Promise<HealthSummary | undefined> {
+    return this.dbService.kyselyHealth
+      .selectFrom('health_summaries')
+      .selectAll()
+      .orderBy('date', 'desc')
+      .limit(1)
+      .executeTakeFirst();
+  }
+
+  // Complex queries
+  private async getTestResultsWithProfiles(limit = 50): Promise<any[]> {
+    return this.dbService.kyselyHealth
+      .selectFrom('test_results')
+      .innerJoin('test_profiles', 'test_results.testProfileId', 'test_profiles.id')
+      .select([
+        'test_results.id',
+        'test_results.status',
+        'test_results.durationMs',
+        'test_results.errorMessage',
+        'test_results.startedAt',
+        'test_results.completedAt',
+        'test_profiles.name',
+        'test_profiles.category',
+        'test_profiles.target'
+      ])
+      .orderBy('test_results.createdAt', 'desc')
+      .limit(limit)
+      .execute();
+  }
+
+  private async getHealthDashboardData(): Promise<any> {
+    // Get latest health summary
+    const latestSummary = await this.getLatestHealthSummary();
+
+    // Get recent test results (last 24 hours)
+    const yesterday = Date.now() - (24 * 60 * 60 * 1000);
+    const recentResults = await this.dbService.kyselyHealth
+      .selectFrom('test_results')
+      .select([
+        'status',
+        this.dbService.kyselyHealth.fn.count('id').as('count')
+      ])
+      .where('createdAt', '>=', yesterday)
+      .groupBy('status')
+      .execute();
+
+    // Get AI usage stats (last 7 days)
+    const aiStats = await this.getAiUsageStats(7);
+
+    // Get performance trends (last 7 days)
+    const performanceTrends = await this.dbService.kyselyHealth
+      .selectFrom('test_results')
+      .select([
+        this.dbService.kyselyHealth.fn.date('createdAt / 1000', 'unixepoch', 'localtime').as('date'),
+        this.dbService.kyselyHealth.fn.avg('durationMs').as('avgDuration'),
+        this.dbService.kyselyHealth.fn.count('id').as('totalTests'),
+        this.dbService.kyselyHealth.fn.sum(
+          this.dbService.kyselyHealth.fn.iif('status = "passed"', 1, 0)
+        ).as('passedTests')
+      ])
+      .where('createdAt', '>=', Date.now() - (7 * 24 * 60 * 60 * 1000))
+      .groupBy(this.dbService.kyselyHealth.fn.date('createdAt / 1000', 'unixepoch', 'localtime'))
+      .orderBy('date', 'asc')
+      .execute();
+
+    return {
+      summary: latestSummary,
+      recentResults,
+      aiStats,
+      performanceTrends
     };
+  }
+
+  // Cleanup operations
+  private async cleanupOldData(daysToKeep = 90): Promise<{ deletedResults: number; deletedLogs: string }> {
+    const cutoffDate = Date.now() - (daysToKeep * 24 * 60 * 60 * 1000);
+
+    // Clean up old test results (keep last 1000 per profile)
+    const oldResults = await this.dbService.kyselyHealth
+      .selectFrom('test_results')
+      .select(['testProfileId', 'id'])
+      .where('createdAt', '<', cutoffDate)
+      .orderBy('createdAt', 'desc')
+      .execute();
+
+    // Keep only the most recent results for each profile
+    const toDelete = new Set<number>();
+    const profileCounts = new Map<number, number>();
+
+    for (const result of oldResults) {
+      const count = profileCounts.get(result.testProfileId) || 0;
+      if (count >= 1000) {
+        toDelete.add(result.id);
+      } else {
+        profileCounts.set(result.testProfileId, count + 1);
+      }
+    }
+
+    if (toDelete.size > 0) {
+      await this.dbService.kyselyHealth
+        .deleteFrom('test_results')
+        .where('id', 'in', Array.from(toDelete))
+        .execute();
+    }
+
+    // Clean up old AI logs (keep last 30 days)
+    await this.dbService.kyselyHealth
+      .deleteFrom('ai_logs')
+      .where('createdAt', '<', cutoffDate)
+      .execute();
+
+    return { deletedResults: toDelete.size, deletedLogs: 'cleaned' };
+  }
 }
-
-export class HealthOps extends BaseWorkerEntrypoint<CoreEnv> {
-    private dbService = createDatabaseService(this.env);
-
-    // ========================================
-    // HEALTH CHECK OPERATIONS
-    // ========================================
-
-    /**
-     * Get health check by UUID
-     */
-    async getHealthCheck(params: {
-        healthCheckUuid: string;
-    }): Promise<HealthCheckResponse | null> {
-        const [check] = await this.dbService.health
-            .select()
-            .from(schema.healthChecks)
-            .where(eq(schema.healthChecks.healthCheckUuid, params.healthCheckUuid))
-            .limit(1);
-
-        if (!check) return null;
-
-        return {
-            id: check.id,
-            healthCheckUuid: check.healthCheckUuid,
-            triggerType: check.triggerType,
-            triggerSource: check.triggerSource ?? null,
-            status: check.status ?? 'running',
-            totalWorkers: check.totalWorkers ?? 0,
-            completedWorkers: check.completedWorkers ?? 0,
-            passedWorkers: check.passedWorkers ?? 0,
-            failedWorkers: check.failedWorkers ?? 0,
-            overallHealthScore: check.overallHealthScore ?? 0.0,
-            aiAnalysis: check.aiAnalysis ?? null,
-            aiRecommendations: check.aiRecommendations ?? null,
-            startedAt: check.startedAt ?? Date.now(),
-            completedAt: check.completedAt ?? null,
-            timeoutAt: check.timeoutAt ?? null,
-            createdAt: check.createdAt ?? Date.now(),
-        };
-    }
-
-    /**
-     * Get health checks with filters
-     */
-    async getHealthChecks(params: {
-        triggerType?: string;
-        status?: string;
-        limit?: number;
-        offset?: number;
-    }): Promise<PaginatedResponse<HealthCheckResponse>> {
-        const limit = params.limit ?? 50;
-        const offset = params.offset ?? 0;
-
-        const conditions = [];
-        if (params.triggerType) {
-            conditions.push(eq(schema.healthChecks.triggerType, params.triggerType));
-        }
-        if (params.status) {
-            conditions.push(eq(schema.healthChecks.status, params.status));
-        }
-
-        const checks = await this.dbService.health
-            .select()
-            .from(schema.healthChecks)
-            .where(conditions.length > 0 ? and(...conditions) : undefined)
-            .orderBy(desc(schema.healthChecks.startedAt))
-            .limit(limit)
-            .offset(offset);
-
-        // Get total count
-        const allChecks = await this.dbService.health
-            .select()
-            .from(schema.healthChecks)
-            .where(conditions.length > 0 ? and(...conditions) : undefined);
-
-        const total = allChecks.length;
-
-        return {
-            data: checks.map(check => ({
-                id: check.id,
-                healthCheckUuid: check.healthCheckUuid,
-                triggerType: check.triggerType,
-                triggerSource: check.triggerSource ?? null,
-                status: check.status ?? 'running',
-                totalWorkers: check.totalWorkers ?? 0,
-                completedWorkers: check.completedWorkers ?? 0,
-                passedWorkers: check.passedWorkers ?? 0,
-                failedWorkers: check.failedWorkers ?? 0,
-                overallHealthScore: check.overallHealthScore ?? 0.0,
-                aiAnalysis: check.aiAnalysis ?? null,
-                aiRecommendations: check.aiRecommendations ?? null,
-                startedAt: check.startedAt ?? Date.now(),
-                completedAt: check.completedAt ?? null,
-                timeoutAt: check.timeoutAt ?? null,
-                createdAt: check.createdAt ?? Date.now(),
-            })),
-            pagination: {
-                limit,
-                offset,
-                total,
-                hasMore: offset + limit < total,
-            },
-        };
-    }
-
-    /**
-     * Create health check
-     */
-    async createHealthCheck(params: {
-        healthCheckUuid: string;
-        triggerType: string;
-        triggerSource?: string;
-        totalWorkers?: number;
-        timeoutAt?: number;
-    }): Promise<{ id: number }> {
-        const [check] = await this.dbService.health
-            .insert(schema.healthChecks)
-            .values({
-                healthCheckUuid: params.healthCheckUuid,
-                triggerType: params.triggerType,
-                triggerSource: params.triggerSource ?? null,
-                totalWorkers: params.totalWorkers ?? 0,
-                timeoutAt: params.timeoutAt ?? null,
-                status: 'running',
-            })
-            .returning();
-
-        return { id: check.id };
-    }
-
-    /**
-     * Update health check
-     */
-    async updateHealthCheck(params: {
-        healthCheckUuid: string;
-        status?: string;
-        completedWorkers?: number;
-        passedWorkers?: number;
-        failedWorkers?: number;
-        overallHealthScore?: number;
-        aiAnalysis?: string;
-        aiRecommendations?: string;
-        completedAt?: number;
-    }): Promise<{ ok: boolean }> {
-        const updateData: Partial<typeof schema.healthChecks.$inferInsert> = {};
-
-        if (params.status !== undefined) updateData.status = params.status;
-        if (params.completedWorkers !== undefined) updateData.completedWorkers = params.completedWorkers;
-        if (params.passedWorkers !== undefined) updateData.passedWorkers = params.passedWorkers;
-        if (params.failedWorkers !== undefined) updateData.failedWorkers = params.failedWorkers;
-        if (params.overallHealthScore !== undefined) updateData.overallHealthScore = params.overallHealthScore;
-        if (params.aiAnalysis !== undefined) updateData.aiAnalysis = params.aiAnalysis;
-        if (params.aiRecommendations !== undefined) updateData.aiRecommendations = params.aiRecommendations;
-        if (params.completedAt !== undefined) updateData.completedAt = params.completedAt;
-
-        await this.dbService.health
-            .update(schema.healthChecks)
-            .set(updateData)
-            .where(eq(schema.healthChecks.healthCheckUuid, params.healthCheckUuid));
-
-        return { ok: true };
-    }
-
-    // ========================================
-    // WORKER HEALTH CHECK OPERATIONS
-    // ========================================
-
-    /**
-     * Get worker health check by UUID
-     */
-    async getWorkerHealthCheck(params: {
-        workerCheckUuid: string;
-    }): Promise<WorkerHealthCheckResponse | null> {
-        const [check] = await this.dbService.health
-            .select()
-            .from(schema.workerHealthChecks)
-            .where(eq(schema.workerHealthChecks.workerCheckUuid, params.workerCheckUuid))
-            .limit(1);
-
-        if (!check) return null;
-
-        return {
-            id: check.id,
-            workerCheckUuid: check.workerCheckUuid,
-            healthCheckUuid: check.healthCheckUuid,
-            workerName: check.workerName,
-            workerType: check.workerType,
-            workerUrl: check.workerUrl ?? null,
-            status: check.status ?? 'pending',
-            overallStatus: check.overallStatus ?? null,
-            healthScore: check.healthScore ?? 0.0,
-            createdAt: check.createdAt ?? Date.now(),
-            completedAt: check.completedAt ?? null,
-        };
-    }
-
-    /**
-     * Get worker health checks by health check UUID
-     */
-    async getWorkerHealthChecks(params: {
-        healthCheckUuid: string;
-        limit?: number;
-        offset?: number;
-    }): Promise<PaginatedResponse<WorkerHealthCheckResponse>> {
-        const limit = params.limit ?? 100;
-        const offset = params.offset ?? 0;
-
-        const checks = await this.dbService.health
-            .select()
-            .from(schema.workerHealthChecks)
-            .where(eq(schema.workerHealthChecks.healthCheckUuid, params.healthCheckUuid))
-            .orderBy(desc(schema.workerHealthChecks.createdAt))
-            .limit(limit)
-            .offset(offset);
-
-        // Get total count
-        const allChecks = await this.dbService.health
-            .select()
-            .from(schema.workerHealthChecks)
-            .where(eq(schema.workerHealthChecks.healthCheckUuid, params.healthCheckUuid));
-
-        const total = allChecks.length;
-
-        return {
-            data: checks.map(check => ({
-                id: check.id,
-                workerCheckUuid: check.workerCheckUuid,
-                healthCheckUuid: check.healthCheckUuid,
-                workerName: check.workerName,
-                workerType: check.workerType,
-                workerUrl: check.workerUrl ?? null,
-                status: check.status ?? 'pending',
-                overallStatus: check.overallStatus ?? null,
-                healthScore: check.healthScore ?? 0.0,
-                createdAt: check.createdAt ?? Date.now(),
-                completedAt: check.completedAt ?? null,
-            })),
-            pagination: {
-                limit,
-                offset,
-                total,
-                hasMore: offset + limit < total,
-            },
-        };
-    }
-
-    /**
-     * Create worker health check
-     */
-    async createWorkerHealthCheck(params: {
-        workerCheckUuid: string;
-        healthCheckUuid: string;
-        workerName: string;
-        workerType: string;
-        workerUrl?: string;
-    }): Promise<{ id: number }> {
-        const [check] = await this.dbService.health
-            .insert(schema.workerHealthChecks)
-            .values({
-                workerCheckUuid: params.workerCheckUuid,
-                healthCheckUuid: params.healthCheckUuid,
-                workerName: params.workerName,
-                workerType: params.workerType,
-                workerUrl: params.workerUrl ?? null,
-                status: 'pending',
-            })
-            .returning();
-
-        return { id: check.id };
-    }
-
-    /**
-     * Update worker health check
-     */
-    async updateWorkerHealthCheck(params: {
-        workerCheckUuid: string;
-        status?: string;
-        overallStatus?: string;
-        healthScore?: number;
-        completedAt?: number;
-    }): Promise<{ ok: boolean }> {
-        const updateData: Partial<typeof schema.workerHealthChecks.$inferInsert> = {};
-
-        if (params.status !== undefined) updateData.status = params.status;
-        if (params.overallStatus !== undefined) updateData.overallStatus = params.overallStatus;
-        if (params.healthScore !== undefined) updateData.healthScore = params.healthScore;
-        if (params.completedAt !== undefined) updateData.completedAt = params.completedAt;
-
-        await this.dbService.health
-            .update(schema.workerHealthChecks)
-            .set(updateData)
-            .where(eq(schema.workerHealthChecks.workerCheckUuid, params.workerCheckUuid));
-
-        return { ok: true };
-    }
-}
-

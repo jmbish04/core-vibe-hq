@@ -140,11 +140,11 @@ Adhere to the following guidelines:
 {{userSuggestions}}`;
 
 const formatUserSuggestions = (suggestions?: string[] | null): string => {
-    if (!suggestions || suggestions.length === 0) {
-        return '';
-    }
-    
-    return `
+  if (!suggestions || suggestions.length === 0) {
+    return '';
+  }
+
+  return `
 <USER SUGGESTIONS>
 The following client suggestions and feedback have been provided, relayed by our client conversation agent.
 Explicitly state user's needs and suggestions in relevant files and components. For example, if user provides an image url, explicitly state it as-in in changes required for that file.
@@ -161,79 +161,79 @@ And add this information detailedly in the phase description as well as in the r
 };
 
 const issuesPromptFormatterWithGuidelines = (issues: IssueReport): string => {
-    let serialized = issuesPromptFormatter(issues);
-    if (issues.hasRuntimeErrors()) {
-        serialized = `
+  let serialized = issuesPromptFormatter(issues);
+  if (issues.hasRuntimeErrors()) {
+    serialized = `
 ${PROMPT_UTILS.COMMON_PITFALLS}
 
 ${issues.runtimeErrors.some((error) => error.message.includes('infinite loop') || error.message.includes('re-renders')) ? PROMPT_UTILS.REACT_RENDER_LOOP_PREVENTION: ''}
 
 ${serialized}`;
-    }
-    return serialized;
+  }
+  return serialized;
 };
 
 const userPromptFormatter = (issues: IssueReport, userSuggestions?: string[], isUserSuggestedPhase?: boolean) => {
-    let prompt = NEXT_PHASE_USER_PROMPT
-        .replaceAll('{{issues}}', issuesPromptFormatterWithGuidelines(issues))
-        .replaceAll('{{userSuggestions}}', formatUserSuggestions(userSuggestions));
-    
-    if (isUserSuggestedPhase) {
-        prompt = prompt.replaceAll('{{generateInstructions}}', 'User submitted feedback. Please thoroughly review the user needs and generate the next phase of the application accordingly, completely addressing their pain points in the right and proper way. And name the phase accordingly.');
-    } else {
-        prompt = prompt.replaceAll('{{generateInstructions}}', 'Generate the next phase of the application.');
-    }
-    
-    return PROMPT_UTILS.verifyPrompt(prompt);
-}
+  let prompt = NEXT_PHASE_USER_PROMPT
+    .replaceAll('{{issues}}', issuesPromptFormatterWithGuidelines(issues))
+    .replaceAll('{{userSuggestions}}', formatUserSuggestions(userSuggestions));
+
+  if (isUserSuggestedPhase) {
+    prompt = prompt.replaceAll('{{generateInstructions}}', 'User submitted feedback. Please thoroughly review the user needs and generate the next phase of the application accordingly, completely addressing their pain points in the right and proper way. And name the phase accordingly.');
+  } else {
+    prompt = prompt.replaceAll('{{generateInstructions}}', 'Generate the next phase of the application.');
+  }
+
+  return PROMPT_UTILS.verifyPrompt(prompt);
+};
 export class PhaseGenerationOperation extends AgentOperation<PhaseGenerationInputs, PhaseConceptGenerationSchemaType> {
-    async execute(
-        inputs: PhaseGenerationInputs,
-        options: OperationOptions
-    ): Promise<PhaseConceptGenerationSchemaType> {
-        const { issues, userContext, isUserSuggestedPhase } = inputs;
-        const { env, logger, context } = options;
-        try {
-            const suggestionsInfo = userContext?.suggestions && userContext.suggestions.length > 0
-                ? `with ${userContext.suggestions.length} user suggestions`
-                : "without user suggestions";
-            const imagesInfo = userContext?.images && userContext.images.length > 0
-                ? ` and ${userContext.images.length} image(s)`
-                : "";
-            
-            logger.info(`Generating next phase ${suggestionsInfo}${imagesInfo}`);
-    
-            // Create user message with optional images
-            const userPrompt = userPromptFormatter(issues, userContext?.suggestions, isUserSuggestedPhase);
-            const userMessage = userContext?.images && userContext.images.length > 0
-                ? createMultiModalUserMessage(
-                    userPrompt,
-                    await imagesToBase64(env, userContext?.images),
-                    'high'
-                )
-                : createUserMessage(userPrompt);
-            
-            const messages: Message[] = [
-                ...getSystemPromptWithProjectContext(SYSTEM_PROMPT, context),
-                userMessage
-            ];
-    
-            const { object: results } = await executeInference({
-                env: env,
-                messages,
-                agentActionName: "phaseGeneration",
-                schema: PhaseConceptGenerationSchema,
-                context: options.inferenceContext,
-                reasoning_effort: (userContext?.suggestions || issues.runtimeErrors.length > 0) ? AGENT_CONFIG.phaseGeneration.reasoning_effort == 'low' ? 'medium' : 'high' : undefined,
-                format: 'markdown',
-            });
-    
-            logger.info(`Generated next phase: ${results.name}, ${results.description}`);
-    
-            return results;
-        } catch (error) {
-            logger.error("Error generating next phase:", error);
-            throw error;
-        }
+  async execute(
+    inputs: PhaseGenerationInputs,
+    options: OperationOptions,
+  ): Promise<PhaseConceptGenerationSchemaType> {
+    const { issues, userContext, isUserSuggestedPhase } = inputs;
+    const { env, logger, context } = options;
+    try {
+      const suggestionsInfo = userContext?.suggestions && userContext.suggestions.length > 0
+        ? `with ${userContext.suggestions.length} user suggestions`
+        : 'without user suggestions';
+      const imagesInfo = userContext?.images && userContext.images.length > 0
+        ? ` and ${userContext.images.length} image(s)`
+        : '';
+
+      logger.info(`Generating next phase ${suggestionsInfo}${imagesInfo}`);
+
+      // Create user message with optional images
+      const userPrompt = userPromptFormatter(issues, userContext?.suggestions, isUserSuggestedPhase);
+      const userMessage = userContext?.images && userContext.images.length > 0
+        ? createMultiModalUserMessage(
+          userPrompt,
+          await imagesToBase64(env, userContext?.images),
+          'high',
+        )
+        : createUserMessage(userPrompt);
+
+      const messages: Message[] = [
+        ...getSystemPromptWithProjectContext(SYSTEM_PROMPT, context),
+        userMessage,
+      ];
+
+      const { object: results } = await executeInference({
+        env,
+        messages,
+        agentActionName: 'phaseGeneration',
+        schema: PhaseConceptGenerationSchema,
+        context: options.inferenceContext,
+        reasoning_effort: (userContext?.suggestions || issues.runtimeErrors.length > 0) ? AGENT_CONFIG.phaseGeneration.reasoning_effort == 'low' ? 'medium' : 'high' : undefined,
+        format: 'markdown',
+      });
+
+      logger.info(`Generated next phase: ${results.name}, ${results.description}`);
+
+      return results;
+    } catch (error) {
+      logger.error('Error generating next phase:', error);
+      throw error;
     }
+  }
 }

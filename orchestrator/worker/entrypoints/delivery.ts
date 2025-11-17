@@ -15,14 +15,14 @@
  * ------------------------------------------------------------
  */
 
-import type { CoreEnv } from '@shared/types/env'
+import type { CoreEnv } from '@shared/types/env';
 // This client is hypothetical, but follows your pattern
-import { ProvisionerClient } from '@shared/clients/provisionerClient'
-import { BaseWorkerEntrypoint } from '@shared/base/workerEntrypoint'
-import { DeployWorkerResponse, DeployPagesResponse } from './types'
+import { ProvisionerClient } from '@shared/clients/provisionerClient';
+import { BaseWorkerEntrypoint } from '@shared/base/workerEntrypoint';
+import { DeployWorkerResponse, DeployPagesResponse } from './types';
 
 export class Delivery extends BaseWorkerEntrypoint<CoreEnv> {
-  
+
   /**
    * Deploys a new Cloudflare Worker service from a factory output.
    */
@@ -32,8 +32,8 @@ export class Delivery extends BaseWorkerEntrypoint<CoreEnv> {
     bindings: { type: string, name: string, value: string }[]
     orderId?: string
   }): Promise<DeployWorkerResponse> {
-    const provisioner = new ProvisionerClient(this.env)
-    const result = await provisioner.deployWorker(params)
+    const provisioner = new ProvisionerClient(this.env);
+    const result = await provisioner.deployWorker(params);
 
     // Kysely query
     await this.db
@@ -45,9 +45,9 @@ export class Delivery extends BaseWorkerEntrypoint<CoreEnv> {
         details: JSON.stringify({ service: params.serviceName }),
         order_id: params.orderId ?? null,
       })
-      .execute()
-    
-    return result // e.g., { ok: true, worker_url: '...' }
+      .execute();
+
+    return result; // e.g., { ok: true, worker_url: '...' }
   }
 
   /**
@@ -58,8 +58,8 @@ export class Delivery extends BaseWorkerEntrypoint<CoreEnv> {
     commitHash: string
     orderId?: string
   }): Promise<DeployPagesResponse> {
-    const provisioner = new ProvisionerClient(this.env)
-    const result = await provisioner.deployPages(params)
+    const provisioner = new ProvisionerClient(this.env);
+    const result = await provisioner.deployPages(params);
 
     // Kysely query
     await this.db
@@ -71,8 +71,8 @@ export class Delivery extends BaseWorkerEntrypoint<CoreEnv> {
         details: JSON.stringify({ project: params.projectName, commit: params.commitHash }),
         order_id: params.orderId ?? null,
       })
-      .execute()
-    
-    return result // e.g., { ok: true, pages_url: '...' }
+      .execute();
+
+    return result; // e.g., { ok: true, pages_url: '...' }
   }
 }

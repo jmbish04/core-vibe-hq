@@ -31,3 +31,11 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: apps/agent-factory
 
+      - name: Validate Deployment
+        run: ./scripts/validate-worker-deployment.sh agent-factory
+        env:
+          WORKER_NAME: agent-factory
+          WORKER_TYPE: factory
+          HEALTH_WORKER_TARGETS: ${{ secrets.HEALTH_WORKER_TARGETS }}
+          ORCHESTRATOR_URL: ${{ secrets.ORCHESTRATOR_URL }}
+

@@ -16,7 +16,10 @@
     "types": ["node", "jest"],
     "baseUrl": ".",
     "paths": {
-      "@shared/*": ["../@shared/*"]
+      "@shared/*": ["../@shared/*"],
+      "partykit/partyserver": ["../third_party/partykit/packages/partyserver/src/index.ts"],
+      "partykit/partysocket": ["../third_party/partykit/packages/partysocket/src/index.ts"],
+      "partykit/hono-party": ["../third_party/partykit/packages/hono-party/src/index.ts"]
     }
   },
   "include": [

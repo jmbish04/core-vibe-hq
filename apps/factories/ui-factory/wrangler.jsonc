@@ -6,6 +6,20 @@
     "port": 8791,
     "local_protocol": "http"
   },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "UIFactoryAgent",
+        "class_name": "UIFactoryAgent"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["UIFactoryAgent"]
+    }
+  ],
   "vars": {
     "FACTORY_TYPE": "ui",
     "MAX_CONCURRENT_BUILDS": "8",

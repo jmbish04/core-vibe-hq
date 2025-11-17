@@ -59,6 +59,11 @@
       "entrypoint": "Specialist"
     },
     {
+      "binding": "ORCHESTRATOR_OPS_MONITOR",
+      "service": "vibehq-orchestrator",
+      "entrypoint": "OpsMonitorOps"
+    },
+    {
       "binding": "ORCHESTRATOR_HEALTH_CHECK",
       "service": "vibehq-orchestrator",
       "entrypoint": "Health"
@@ -94,9 +99,24 @@
       "entrypoint": "HealthOps"
     },
     {
+      "binding": "ORCHESTRATOR_PATCH",
+      "service": "vibehq-orchestrator",
+      "entrypoint": "PatchOps"
+    },
+    {
+      "binding": "ORCHESTRATOR_AI_PROVIDER",
+      "service": "vibehq-orchestrator",
+      "entrypoint": "AIProviderOps"
+    },
+    {
       "binding": "ORCHESTRATOR_DOCS",
       "service": "vibehq-orchestrator",
       "entrypoint": "DocsOps"
+    },
+    {
+      "binding": "ORCHESTRATOR_CONTAINER_MONITORING",
+      "service": "vibehq-orchestrator",
+      "entrypoint": "ContainerMonitoringOps"
     }
   ],
   

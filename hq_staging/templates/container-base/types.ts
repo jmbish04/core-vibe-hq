@@ -316,19 +316,30 @@ export const DEFAULT_LOG_STORE_OPTIONS: LogStoreOptions = {
 } as const;
 
 // Configurable paths - use environment variables or default to ./data directory
+// NOTE: This is only for file-based logging (SimpleLogManager), NOT for databases
+// All database operations route through orchestrator D1 - no local SQLite databases
 export const getDataDirectory = (): string => {
   return process.env.CLI_DATA_DIR || './.data';
 };
 
+// DEPRECATED: SQLite database paths removed - all data stored in orchestrator D1
+// These functions are kept for backward compatibility but return empty strings
+// to prevent accidental local database creation
+/** @deprecated Use orchestrator D1 via OrchestratorClient - no local SQLite databases */
 export const getErrorDbPath = (): string => {
-  return process.env.CLI_ERROR_DB_PATH || `${getDataDirectory()}/errors.db`;
+  console.warn('getErrorDbPath() is deprecated - all errors stored in orchestrator D1');
+  return '';
 };
 
+/** @deprecated Use orchestrator D1 via OrchestratorClient - no local SQLite databases */
 export const getLogDbPath = (): string => {
-  return process.env.CLI_LOG_DB_PATH || `${getDataDirectory()}/logs.db`;
+  console.warn('getLogDbPath() is deprecated - all logs stored in orchestrator D1');
+  return '';
 };
 
-// Legacy constants for backward compatibility
-export const ERROR_DB_PATH = getErrorDbPath();
-export const LOG_DB_PATH = getLogDbPath();
+// Legacy constants - deprecated, return empty strings
+/** @deprecated Use orchestrator D1 - no local SQLite databases */
+export const ERROR_DB_PATH = '';
+/** @deprecated Use orchestrator D1 - no local SQLite databases */
+export const LOG_DB_PATH = '';
 export const ERROR_HASH_ALGORITHM = 'sha256' as const;

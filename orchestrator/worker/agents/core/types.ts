@@ -60,6 +60,6 @@ export interface PhaseExecutionResult {
 /**
  * Result type for deep debug operations
  */
-export type DeepDebugResult = 
+export type DeepDebugResult =
     | { success: true; transcript: string }
     | { success: false; error: string };

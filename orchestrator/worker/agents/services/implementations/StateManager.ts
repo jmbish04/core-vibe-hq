@@ -6,32 +6,32 @@ import { CodeGenState } from '../../core/state';
  * Works with the Agent's state management
  */
 export class StateManager implements IStateManager {
-    constructor(
+  constructor(
         private getStateFunc: () => CodeGenState,
-        private setStateFunc: (state: CodeGenState) => void
-    ) {}
+        private setStateFunc: (state: CodeGenState) => void,
+  ) {}
 
-    getState(): Readonly<CodeGenState> {
-        return this.getStateFunc();
-    }
+  getState(): Readonly<CodeGenState> {
+    return this.getStateFunc();
+  }
 
-    setState(newState: CodeGenState): void {
-        this.setStateFunc(newState);
-    }
+  setState(newState: CodeGenState): void {
+    this.setStateFunc(newState);
+  }
 
-    updateField<K extends keyof CodeGenState>(field: K, value: CodeGenState[K]): void {
-        const currentState = this.getState();
-        this.setState({
-            ...currentState,
-            [field]: value
-        });
-    }
+  updateField<K extends keyof CodeGenState>(field: K, value: CodeGenState[K]): void {
+    const currentState = this.getState();
+    this.setState({
+      ...currentState,
+      [field]: value,
+    });
+  }
 
-    batchUpdate(updates: Partial<CodeGenState>): void {
-        const currentState = this.getState();
-        this.setState({
-            ...currentState,
-            ...updates
-        });
-    }
+  batchUpdate(updates: Partial<CodeGenState>): void {
+    const currentState = this.getState();
+    this.setState({
+      ...currentState,
+      ...updates,
+    });
+  }
 }

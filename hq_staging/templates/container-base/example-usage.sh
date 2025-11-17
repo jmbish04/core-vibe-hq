@@ -2,20 +2,24 @@
 
 # Example usage of CLI tools outside Docker environment
 # This script demonstrates how to use the CLI tools in any directory
+# NOTE: All monitoring data is stored in orchestrator D1 - no local SQLite databases
 
 echo "=== CLI Tools Configuration Example ==="
 echo
 
-# Set custom data directory (optional)
+# Set custom data directory for file logs (optional - only for SimpleLogManager)
 export CLI_DATA_DIR="./monitoring-data"
 
-# Set custom database paths (optional)
-export CLI_ERROR_DB_PATH="./monitoring-data/runtime-errors.db"
-export CLI_LOG_DB_PATH="./monitoring-data/process-logs.db"
+# Orchestrator configuration (REQUIRED for database operations)
+export ORCHESTRATOR_URL="http://localhost:8787"  # Or your orchestrator URL
+export WORKER_NAME="my-worker"                    # Worker identifier
+export CONTAINER_NAME="my-container"             # Optional container identifier
 
-echo "Data directory: $CLI_DATA_DIR"
-echo "Error database: $CLI_ERROR_DB_PATH"
-echo "Log database: $CLI_LOG_DB_PATH"
+echo "Data directory (file logs): $CLI_DATA_DIR"
+echo "Orchestrator URL: $ORCHESTRATOR_URL"
+echo "Worker Name: $WORKER_NAME"
+echo "Container Name: $CONTAINER_NAME"
+echo "Note: All database operations route to orchestrator D1"
 echo
 
 # Example: Start monitoring a process

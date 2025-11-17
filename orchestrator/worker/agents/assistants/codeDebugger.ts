@@ -1,10 +1,10 @@
 import Assistant from './assistant';
 import {
-    ConversationMessage,
-    createAssistantMessage,
-    createSystemMessage,
-    createUserMessage,
-    Message,
+  ConversationMessage,
+  createAssistantMessage,
+  createSystemMessage,
+  createUserMessage,
+  Message,
 } from '../inferutils/common';
 import { executeInference } from '../inferutils/infer';
 import { InferenceContext, ModelConfig } from '../inferutils/config.types';
@@ -470,11 +470,11 @@ If multiple subsequent tools start to fail, it might indicate issues with the sa
 </appendix>`;
 
 const USER_PROMPT = (
-    issue: string, 
-    fileSummaries: string, 
-    templateInfo?: string, 
-    runtimeErrors?: string,
-    previousTranscript?: string
+  issue: string,
+  fileSummaries: string,
+  templateInfo?: string,
+  runtimeErrors?: string,
+  previousTranscript?: string,
 ) => `## Debugging Task
 **Issue to resolve:** ${issue}
 
@@ -554,61 +554,61 @@ export type DebugInputs = {
 };
 
 function summarizeFiles(files: FileState[], max = 120): string {
-    const compact = files
-        .slice(0, max)
-        .map((f) => {
-            const purpose = f.filePurpose ? ` — ${f.filePurpose}` : '';
-            // const changes = f.lastDiff ? ` (recent changes)` : '';
-            return `- ${f.filePath}${purpose}`;
-        })
-        .join('\n');
-    const extra = files.length > max ? `\n...and ${files.length - max} more` : '';
-    return compact + extra;
+  const compact = files
+    .slice(0, max)
+    .map((f) => {
+      const purpose = f.filePurpose ? ` — ${f.filePurpose}` : '';
+      // const changes = f.lastDiff ? ` (recent changes)` : '';
+      return `- ${f.filePath}${purpose}`;
+    })
+    .join('\n');
+  const extra = files.length > max ? `\n...and ${files.length - max} more` : '';
+  return compact + extra;
 }
 
 export class DeepCodeDebugger extends Assistant<Env> {
-    logger = createObjectLogger(this, 'DeepCodeDebugger');
-    modelConfigOverride?: ModelConfig;
+  logger = createObjectLogger(this, 'DeepCodeDebugger');
+  modelConfigOverride?: ModelConfig;
 
-    private loopDetection: LoopDetectionState = {
-        recentCalls: [],
-        repetitionWarnings: 0,
-    };
+  private loopDetection: LoopDetectionState = {
+    recentCalls: [],
+    repetitionWarnings: 0,
+  };
 
-    constructor(
-        env: Env,
-        inferenceContext: InferenceContext,
-        modelConfigOverride?: ModelConfig,
-    ) {
-        super(env, inferenceContext);
-        this.modelConfigOverride = modelConfigOverride;
-    }
+  constructor(
+    env: Env,
+    inferenceContext: InferenceContext,
+    modelConfigOverride?: ModelConfig,
+  ) {
+    super(env, inferenceContext);
+    this.modelConfigOverride = modelConfigOverride;
+  }
 
-    private detectRepetition(toolName: string, args: Record<string, unknown>): boolean {
-        const argsStr = JSON.stringify(args);
-        const now = Date.now();
+  private detectRepetition(toolName: string, args: Record<string, unknown>): boolean {
+    const argsStr = JSON.stringify(args);
+    const now = Date.now();
 
-        // Keep only recent calls (last 10 minutes)
-        this.loopDetection.recentCalls = this.loopDetection.recentCalls.filter(
-            (call) => now - call.timestamp < 600000,
-        );
+    // Keep only recent calls (last 10 minutes)
+    this.loopDetection.recentCalls = this.loopDetection.recentCalls.filter(
+      (call) => now - call.timestamp < 600000,
+    );
 
-        // Count how many times this exact call was made recently
-        const matchingCalls = this.loopDetection.recentCalls.filter(
-            (call) => call.toolName === toolName && call.args === argsStr,
-        );
+    // Count how many times this exact call was made recently
+    const matchingCalls = this.loopDetection.recentCalls.filter(
+      (call) => call.toolName === toolName && call.args === argsStr,
+    );
 
-        // Record this call
-        this.loopDetection.recentCalls.push({ toolName, args: argsStr, timestamp: now });
+    // Record this call
+    this.loopDetection.recentCalls.push({ toolName, args: argsStr, timestamp: now });
 
-        // Repetition detected if same call made 3+ times
-        return matchingCalls.length >= 2;
-    }
+    // Repetition detected if same call made 3+ times
+    return matchingCalls.length >= 2;
+  }
 
-    private injectLoopWarning(toolName: string): void {
-        this.loopDetection.repetitionWarnings++;
+  private injectLoopWarning(toolName: string): void {
+    this.loopDetection.repetitionWarnings++;
 
-        const warningMessage = `
+    const warningMessage = `
 ⚠️ CRITICAL: REPETITION DETECTED
 
 You just attempted to execute "${toolName}" with identical arguments for the ${this.loopDetection.repetitionWarnings}th time.
@@ -626,96 +626,96 @@ DO NOT repeat the same action. The definition of insanity is doing the same thin
 
 If you're genuinely stuck after trying 3 different approaches, honestly report: "TASK_STUCK: [reason]"`;
 
-        this.save([createUserMessage(warningMessage)]);
+    this.save([createUserMessage(warningMessage)]);
+  }
+
+  async run(
+    inputs: DebugInputs,
+    session: DebugSession,
+    streamCb?: (chunk: string) => void,
+    toolRenderer?: RenderToolCall,
+  ): Promise<string> {
+    const fileSummaries = summarizeFiles(session.filesIndex);
+
+    // Fetch template details from agent
+    const operationOptions = session.agent.getOperationOptions();
+    const templateInfo = operationOptions.context.templateDetails
+      ? PROMPT_UTILS.serializeTemplate(operationOptions.context.templateDetails)
+      : undefined;
+
+    const system = createSystemMessage(SYSTEM_PROMPT);
+    const user = createUserMessage(
+      USER_PROMPT(
+        inputs.issue,
+        fileSummaries,
+        templateInfo,
+        session.runtimeErrors ? PROMPT_UTILS.serializeErrors(session.runtimeErrors) : undefined,
+        inputs.previousTranscript,
+      ),
+    );
+    const messages: Message[] = this.save([system, user]);
+
+    const logger = this.logger;
+
+    // Wrap tools with loop detection
+    const rawTools = buildDebugTools(session, logger, toolRenderer);
+    const tools: ToolDefinition<any, any>[] = rawTools.map((tool) => ({
+      ...tool,
+      implementation: async (args: any) => {
+        // Check for repetition before executing
+        if (this.detectRepetition(tool.function.name, args)) {
+          this.logger.warn(`Loop detected for tool: ${tool.function.name}`);
+          this.injectLoopWarning(tool.function.name);
+
+          // // CRITICAL: Block execution to prevent infinite loops
+          // return {
+          //     error: `Loop detected: You've called ${tool.function.name} with the same arguments multiple times. Try a different approach or stop if the task is complete.`
+          // };
+        }
+
+        // Only execute if no loop detected
+        return await tool.implementation(args);
+      },
+    }));
+
+    let out = '';
+
+    try {
+      const result = await executeInference({
+        env: this.env,
+        context: this.inferenceContext,
+        agentActionName: 'deepDebugger',
+        modelConfig: this.modelConfigOverride || AGENT_CONFIG.deepDebugger,
+        messages,
+        tools,
+        stream: streamCb
+          ? { chunk_size: 64, onChunk: (c) => streamCb(c) }
+          : undefined,
+      });
+      out = result?.string || '';
+    } catch (e) {
+      // If error is an infererror, use the partial response transcript
+      if (e instanceof InferError) {
+        out = e.partialResponseTranscript();
+        logger.info('Partial response transcript', { transcript: out });
+      } else {
+        throw e;
+      }
     }
 
-    async run(
-        inputs: DebugInputs,
-        session: DebugSession,
-        streamCb?: (chunk: string) => void,
-        toolRenderer?: RenderToolCall,
-    ): Promise<string> {
-        const fileSummaries = summarizeFiles(session.filesIndex);
-        
-        // Fetch template details from agent
-        const operationOptions = session.agent.getOperationOptions();
-        const templateInfo = operationOptions.context.templateDetails 
-            ? PROMPT_UTILS.serializeTemplate(operationOptions.context.templateDetails)
-            : undefined;
-        
-        const system = createSystemMessage(SYSTEM_PROMPT);
-        const user = createUserMessage(
-            USER_PROMPT(
-                inputs.issue, 
-                fileSummaries, 
-                templateInfo, 
-                session.runtimeErrors ? PROMPT_UTILS.serializeErrors(session.runtimeErrors) : undefined,
-                inputs.previousTranscript
-            )
-        );
-        const messages: Message[] = this.save([system, user]);
-
-        const logger = this.logger;
-
-        // Wrap tools with loop detection
-        const rawTools = buildDebugTools(session, logger, toolRenderer);
-        const tools: ToolDefinition<any, any>[] = rawTools.map((tool) => ({
-            ...tool,
-            implementation: async (args: any) => {
-                // Check for repetition before executing
-                if (this.detectRepetition(tool.function.name, args)) {
-                    this.logger.warn(`Loop detected for tool: ${tool.function.name}`);
-                    this.injectLoopWarning(tool.function.name);
-                    
-                    // // CRITICAL: Block execution to prevent infinite loops
-                    // return {
-                    //     error: `Loop detected: You've called ${tool.function.name} with the same arguments multiple times. Try a different approach or stop if the task is complete.`
-                    // };
-                }
-
-                // Only execute if no loop detected
-                return await tool.implementation(args);
-            },
-        }));
-
-        let out = '';
-
-        try {
-            const result = await executeInference({
-                env: this.env,
-                context: this.inferenceContext,
-                agentActionName: 'deepDebugger',
-                modelConfig: this.modelConfigOverride || AGENT_CONFIG.deepDebugger,
-                messages,
-                tools,
-                stream: streamCb
-                    ? { chunk_size: 64, onChunk: (c) => streamCb(c) }
-                    : undefined,
-            });
-            out = result?.string || '';
-        } catch (e) {
-            // If error is an infererror, use the partial response transcript
-            if (e instanceof InferError) {
-                out = e.partialResponseTranscript();
-                logger.info('Partial response transcript', { transcript: out });
-            } else {
-                throw e;
-            }
-        }
-        
-        // Check for completion signals to prevent unnecessary continuation
-        if (out.includes('TASK_COMPLETE') || out.includes('Mission accomplished') || out.includes('TASK_STUCK')) {
-            this.logger.info('Agent signaled task completion or stuck state, stopping');
-        }
-        
-        this.save([createAssistantMessage(out)]);
-        return out;
+    // Check for completion signals to prevent unnecessary continuation
+    if (out.includes('TASK_COMPLETE') || out.includes('Mission accomplished') || out.includes('TASK_STUCK')) {
+      this.logger.info('Agent signaled task completion or stuck state, stopping');
     }
 
-    	getTranscript(): ConversationMessage[] {
-		return this.getHistory().map((m) => ({
-			...m,
-			conversationId: IdGenerator.generateConversationId(),
-		}));
-	}
+    this.save([createAssistantMessage(out)]);
+    return out;
+  }
+
+        getTranscript(): ConversationMessage[] {
+    return this.getHistory().map((m) => ({
+      ...m,
+      conversationId: IdGenerator.generateConversationId(),
+    }));
+  }
 }

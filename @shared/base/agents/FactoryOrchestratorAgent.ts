@@ -166,10 +166,12 @@ export class FactoryOrchestratorAgent extends BaseFactoryAgent {
         throw new Error(`Failed to write placeholder payload file: ${writeResult.stderr}`)
       }
 
-      // Step 2: Call Python script to process placeholders
-      // The Python script will read the placeholder JSON and process cloned template files
+      // Step 2: Call TypeScript CLI to process placeholders
+      // The CLI will read the placeholder JSON and process cloned template files
       const workspacePath = `/workspace/target_${order.id}`
-      const processResult = await this.execCommand('factory-orchestrator', [
+      const processResult = await this.execCommand('pnpm', [
+        'factory-orchestrator',
+        '--',
         'process-placeholders',
         '--order-id',
         order.id,
@@ -179,17 +181,65 @@ export class FactoryOrchestratorAgent extends BaseFactoryAgent {
         workspacePath,
       ])
 
+      let filesProcessed = 0;
+      let filesModified = 0;
+      let totalLinesGenerated = 0;
+
       if (!processResult.ok) {
-        // Log warning but don't fail - placeholder processing may have partial success
         await this.logAction('fulfill_order', 'warn', {
           order_id: order.id,
-          warning: `Placeholder processing had issues: ${processResult.stderr}`,
+          warning: `Placeholder processing reported issues: ${processResult.stderr}`,
         })
+      } else {
+        try {
+          const stdoutLines = processResult.stdout.trim().split('\n')
+          const summaryLine = stdoutLines[stdoutLines.length - 1]
+          const parsedSummary = JSON.parse(summaryLine)
+
+          filesProcessed = parsedSummary.filesProcessed || 0;
+          filesModified = parsedSummary.filesModified || 0;
+
+          // Estimate lines generated (rough approximation)
+          totalLinesGenerated = filesModified * 25; // Assume ~25 lines per modified file
+
+          await this.logAction('fulfill_order', 'info', {
+            order_id: order.id,
+            placeholder_summary: parsedSummary,
+            estimated_lines_generated: totalLinesGenerated,
+          })
+        } catch (parseError) {
+          await this.logAction('fulfill_order', 'warn', {
+            order_id: order.id,
+            warning: 'Unable to parse factory-orchestrator output as JSON',
+            error: parseError instanceof Error ? parseError.message : String(parseError),
+            raw_output: processResult.stdout,
+          })
+        }
       }
 
-      // Step 3: Collect created/modified files (would be determined by Python script output)
+      // Step 3: Trigger specialists based on generation results
+      if (totalLinesGenerated >= 50) {
+        try {
+          // Access specialist triggers service (would be injected or accessed via env)
+          // For now, log the trigger opportunity - actual triggering would be done by orchestrator
+          await this.logAction('specialist_trigger_opportunity', 'info', {
+            order_id: order.id,
+            specialist_type: 'docstring-architect',
+            trigger_event: 'code-generation-complete',
+            estimated_lines_generated: totalLinesGenerated,
+            files_modified: filesModified,
+          })
+        } catch (triggerError) {
+          await this.logAction('specialist_trigger_error', 'warn', {
+            order_id: order.id,
+            error: triggerError instanceof Error ? triggerError.message : String(triggerError),
+          })
+        }
+      }
+
+      // Step 4: Collect created/modified files (would be determined by CLI output)
       // For now, return success
-      const filesCreated: string[] = [] // Would be populated from Python script output
+      const filesCreated: string[] = [] // Would be populated from CLI output
 
       await this.logAction('fulfill_order', 'info', {
         order_id: order.id,

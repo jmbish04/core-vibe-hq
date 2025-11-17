@@ -53,131 +53,131 @@ export async function executeInference<T extends z.AnyZodObject>(
 export async function executeInference(
     params: InferenceParamsBase
 ): Promise<InferResponseString>;
-    
+
 
 export async function executeInference<T extends z.AnyZodObject>(   {
-    env,
-    messages,
-    temperature,
-    maxTokens,
-    retryLimit = 5, // Increased retry limit for better reliability
-    stream,
-    tools,
-    reasoning_effort,
-    schema,
-    agentActionName,
-    format,
-    modelName,
-    modelConfig,
-    context
+  env,
+  messages,
+  temperature,
+  maxTokens,
+  retryLimit = 5, // Increased retry limit for better reliability
+  stream,
+  tools,
+  reasoning_effort,
+  schema,
+  agentActionName,
+  format,
+  modelName,
+  modelConfig,
+  context,
 }: InferenceParamsBase &    {
     schema?: T;
     format?: SchemaFormat;
 }): Promise<InferResponseString | InferResponseObject<T> | null> {
-    let conf: ModelConfig | undefined;
-    
-    if (modelConfig) {
-        // Use explicitly provided model config
-        conf = modelConfig;
-    } else if (context?.userId && context?.userModelConfigs) {
-        // Try to get user-specific configuration from context cache
-        conf = context.userModelConfigs[agentActionName];
-        if (conf) {
-            logger.info(`Using user configuration for ${agentActionName}: ${JSON.stringify(conf)}`);
-        } else {
-            logger.info(`No user configuration for ${agentActionName}, using AGENT_CONFIG defaults`);
-        }
+  let conf: ModelConfig | undefined;
+
+  if (modelConfig) {
+    // Use explicitly provided model config
+    conf = modelConfig;
+  } else if (context?.userId && context?.userModelConfigs) {
+    // Try to get user-specific configuration from context cache
+    conf = context.userModelConfigs[agentActionName];
+    if (conf) {
+      logger.info(`Using user configuration for ${agentActionName}: ${JSON.stringify(conf)}`);
+    } else {
+      logger.info(`No user configuration for ${agentActionName}, using AGENT_CONFIG defaults`);
     }
+  }
 
-    // Use the final config or fall back to AGENT_CONFIG defaults
-    const finalConf = conf || AGENT_CONFIG[agentActionName];
+  // Use the final config or fall back to AGENT_CONFIG defaults
+  const finalConf = conf || AGENT_CONFIG[agentActionName];
 
-    modelName = modelName || finalConf.name;
-    temperature = temperature || finalConf.temperature || 0.2;
-    maxTokens = maxTokens || finalConf.max_tokens || 16000;
-    reasoning_effort = reasoning_effort || finalConf.reasoning_effort;
+  modelName = modelName || finalConf.name;
+  temperature = temperature || finalConf.temperature || 0.2;
+  maxTokens = maxTokens || finalConf.max_tokens || 16000;
+  reasoning_effort = reasoning_effort || finalConf.reasoning_effort;
 
-    // Exponential backoff for retries
-    const backoffMs = (attempt: number) => Math.min(500 * Math.pow(2, attempt), 10000);
+  // Exponential backoff for retries
+  const backoffMs = (attempt: number) => Math.min(500 * Math.pow(2, attempt), 10000);
 
-    let useCheaperModel = false;
+  let useCheaperModel = false;
 
-    for (let attempt = 0; attempt < retryLimit; attempt++) {
-        try {
-            logger.info(`Starting ${agentActionName} operation with model ${modelName} (attempt ${attempt + 1}/${retryLimit})`);
+  for (let attempt = 0; attempt < retryLimit; attempt++) {
+    try {
+      logger.info(`Starting ${agentActionName} operation with model ${modelName} (attempt ${attempt + 1}/${retryLimit})`);
 
-            const result = schema ? await infer<T>({
-                env,
-                metadata: context,
-                messages,
-                schema,
-                schemaName: agentActionName,
-                actionKey: agentActionName,
-                format,
-                maxTokens,
-                modelName: useCheaperModel ? AIModels.GEMINI_2_5_FLASH : modelName,
-                formatOptions: {
-                    debug: false,
-                },
-                tools,
-                stream,
-                reasoning_effort: useCheaperModel ? undefined : reasoning_effort,
-                temperature,
-                abortSignal: context.abortSignal,
-            }) : await infer({
-                env,
-                metadata: context,
-                messages,
-                maxTokens,
-                modelName: useCheaperModel ? AIModels.GEMINI_2_5_FLASH: modelName,
-                tools,
-                stream,
-                actionKey: agentActionName,
-                reasoning_effort: useCheaperModel ? undefined : reasoning_effort,
-                temperature,
-                abortSignal: context.abortSignal,
-            });
-            logger.info(`Successfully completed ${agentActionName} operation`);
-            // console.log(result);
-            return result;
-        } catch (error) {
-            if (error instanceof RateLimitExceededError || error instanceof SecurityError) {
-                throw error;
-            }
-            
-            // Check if cancellation - don't retry, propagate immediately
-            if (error instanceof InferError && error.message.includes('cancelled')) {
-                logger.info(`${agentActionName} operation cancelled by user, not retrying`);
-                throw error;
-            }
-            
-            const isLastAttempt = attempt === retryLimit - 1;
-            logger.error(
-                `Error during ${agentActionName} operation (attempt ${attempt + 1}/${retryLimit}):`,
-                error
-            );
+      const result = schema ? await infer<T>({
+        env,
+        metadata: context,
+        messages,
+        schema,
+        schemaName: agentActionName,
+        actionKey: agentActionName,
+        format,
+        maxTokens,
+        modelName: useCheaperModel ? AIModels.GEMINI_2_5_FLASH : modelName,
+        formatOptions: {
+          debug: false,
+        },
+        tools,
+        stream,
+        reasoning_effort: useCheaperModel ? undefined : reasoning_effort,
+        temperature,
+        abortSignal: context.abortSignal,
+      }) : await infer({
+        env,
+        metadata: context,
+        messages,
+        maxTokens,
+        modelName: useCheaperModel ? AIModels.GEMINI_2_5_FLASH: modelName,
+        tools,
+        stream,
+        actionKey: agentActionName,
+        reasoning_effort: useCheaperModel ? undefined : reasoning_effort,
+        temperature,
+        abortSignal: context.abortSignal,
+      });
+      logger.info(`Successfully completed ${agentActionName} operation`);
+      // console.log(result);
+      return result;
+    } catch (error) {
+      if (error instanceof RateLimitExceededError || error instanceof SecurityError) {
+        throw error;
+      }
 
-            if (error instanceof InferError && !(error instanceof AbortError)) {
-                // If its an infer error and not an abort error, we can append the partial response to the list of messages and ask a cheaper model to retry the generation
-                if (error.response && error.response.length > 1000) {
-                    messages.push(createAssistantMessage(error.response));
-                    messages.push(createUserMessage(responseRegenerationPrompts));
-                    useCheaperModel = true;
-                }
-            } else {
-                // Try using fallback model if available
-                modelName = conf?.fallbackModel || modelName;
-            }
+      // Check if cancellation - don't retry, propagate immediately
+      if (error instanceof InferError && error.message.includes('cancelled')) {
+        logger.info(`${agentActionName} operation cancelled by user, not retrying`);
+        throw error;
+      }
 
-            if (!isLastAttempt) {
-                // Wait with exponential backoff before retrying
-                const delay = backoffMs(attempt);
-                logger.info(`Retrying in ${delay}ms...`);
-                await new Promise(resolve => setTimeout(resolve, delay));
-            }
+      const isLastAttempt = attempt === retryLimit - 1;
+      logger.error(
+        `Error during ${agentActionName} operation (attempt ${attempt + 1}/${retryLimit}):`,
+        error,
+      );
+
+      if (error instanceof InferError && !(error instanceof AbortError)) {
+        // If its an infer error and not an abort error, we can append the partial response to the list of messages and ask a cheaper model to retry the generation
+        if (error.response && error.response.length > 1000) {
+          messages.push(createAssistantMessage(error.response));
+          messages.push(createUserMessage(responseRegenerationPrompts));
+          useCheaperModel = true;
         }
+      } else {
+        // Try using fallback model if available
+        modelName = conf?.fallbackModel || modelName;
+      }
+
+      if (!isLastAttempt) {
+        // Wait with exponential backoff before retrying
+        const delay = backoffMs(attempt);
+        logger.info(`Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
     }
-    return null;
+  }
+  return null;
 }
 
 /**
@@ -187,12 +187,12 @@ export async function executeInference<T extends z.AnyZodObject>(   {
  * @returns A message for the AI model to enhance the file
  */
 export function createFileEnhancementRequestMessage(filePath: string, fileContents: string): Message {
-    const fileExtension = filePath.split('.').pop() || '';
-    const codeBlock = fileExtension ?
-        `\`\`\`${fileExtension}\n${fileContents}\n\`\`\`` :
-        `\`\`\`\n${fileContents}\n\`\`\``;
+  const fileExtension = filePath.split('.').pop() || '';
+  const codeBlock = fileExtension ?
+    `\`\`\`${fileExtension}\n${fileContents}\n\`\`\`` :
+    `\`\`\`\n${fileContents}\n\`\`\``;
 
-    return createUserMessage(`
+  return createUserMessage(`
 <FILE_ENHANCEMENT_REQUEST>
 Please review the following file and identify any potential issues:
 - Syntax errors
@@ -222,19 +222,19 @@ ${codeBlock}
  * Creates a response message about a generated file
  */
 export function createFileGenerationResponseMessage(filePath: string, fileContents: string, explanation: string, nextFile?: { path: string, purpose: string }): Message {
-    // Format the message in a focused way to reduce token usage
-    const fileExtension = filePath.split('.').pop() || '';
-    const codeBlock = fileExtension ?
-        `\`\`\`${fileExtension}\n${fileContents}\n\`\`\`` :
-        `\`\`\`\n${fileContents}\n\`\`\``;
+  // Format the message in a focused way to reduce token usage
+  const fileExtension = filePath.split('.').pop() || '';
+  const codeBlock = fileExtension ?
+    `\`\`\`${fileExtension}\n${fileContents}\n\`\`\`` :
+    `\`\`\`\n${fileContents}\n\`\`\``;
 
-    return {
-        role: 'assistant',
-        content: `
+  return {
+    role: 'assistant',
+    content: `
 <GENERATED FILE: "${filePath}">
 ${codeBlock}
 
 Explanation: ${explanation}
-Next file to generate: ${nextFile ? `Path: ${nextFile.path} | Purpose: (${nextFile.purpose})` : "None"}
+Next file to generate: ${nextFile ? `Path: ${nextFile.path} | Purpose: (${nextFile.purpose})` : 'None'}
 `};
 }

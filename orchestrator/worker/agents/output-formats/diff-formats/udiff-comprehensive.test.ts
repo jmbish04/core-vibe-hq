@@ -11,7 +11,7 @@ describe('Unified Diff - Comprehensive LLM Resilience Tests', () => {
 -line2
 +modified
  line3`;
-      
+
       // The diff parser is resilient and can still apply the diff
       const result = applyDiff(original, diff);
       expect(result).toBe('line1\nmodified\nline3');
@@ -25,7 +25,7 @@ describe('Unified Diff - Comprehensive LLM Resilience Tests', () => {
 -line2
 +modified
  line3`;
-      
+
       // The diff parser is resilient and can still apply the diff
       const result = applyDiff(original, diff);
       expect(result).toBe('line1\nmodified\nline3');
@@ -40,7 +40,7 @@ describe('Unified Diff - Comprehensive LLM Resilience Tests', () => {
 -line2
 +modified
  line3`;
-      
+
       // The diff parser is resilient and can still apply the diff
       const result = applyDiff(original, diff);
       expect(result).toBe('line1\nmodified\nline3');
@@ -55,7 +55,7 @@ describe('Unified Diff - Comprehensive LLM Resilience Tests', () => {
 -line2
 +modified
  line3`;
-      
+
       // Should either handle gracefully or throw consistently
       try {
         const result = applyDiff(original, diff);
@@ -78,7 +78,7 @@ describe('Unified Diff - Comprehensive LLM Resilience Tests', () => {
 - line2    
 + modified   
  line3`;
-      
+
       const result = applyDiff(original, diff);
       // Note: The implementation currently strips trailing spaces from the prefix
       expect(result).toBe('line1\n modified\nline3');
@@ -91,9 +91,9 @@ describe('Unified Diff - Comprehensive LLM Resilience Tests', () => {
 @@ -1,3 +1,3 @@
  function test() {
 -  return true;
-+	return false;
++    return false;
  }`;
-      
+
       const result = applyDiff(original, diff);
       expect(result).toBe('function test() {\n\treturn false;\n}');
     });
@@ -108,7 +108,7 @@ describe('Unified Diff - Comprehensive LLM Resilience Tests', () => {
 -line3
 +line3 modified
 \\ No newline at end of file`;
-      
+
       const result = applyDiff(original, diff);
       expect(result).toBe('line1\nline2\nline3 modified');
     });
@@ -122,7 +122,7 @@ describe('Unified Diff - Comprehensive LLM Resilience Tests', () => {
 -line2\r
 +modified\r
  line3`;
-      
+
       const result = applyDiff(original, diff);
       expect(result).toBe('line1\r\nmodified\r\nline3');
     });
@@ -136,7 +136,7 @@ describe('Unified Diff - Comprehensive LLM Resilience Tests', () => {
 -line2
 +modified
  line3`;
-      
+
       const result = applyDiff(original, diff);
       expect(result.split(/\r|\n/).filter(l => l)).toContain('modified');
     });
@@ -151,7 +151,7 @@ describe('Unified Diff - Comprehensive LLM Resilience Tests', () => {
 +line1
 +line2
 +line3`;
-      
+
       const result = applyDiff(original, diff);
       // Note: Implementation adds an extra newline when starting from empty file
       expect(result).toBe('\nline1\nline2\nline3');
@@ -165,7 +165,7 @@ describe('Unified Diff - Comprehensive LLM Resilience Tests', () => {
 -line1
 -line2
 -line3`;
-      
+
       // Should throw an error for safety when trying to delete entire file
       expect(() => applyDiff(original, diff)).toThrow('Hunk #1 would delete entire file content - aborting for safety');
     });
@@ -186,7 +186,7 @@ describe('Unified Diff - Comprehensive LLM Resilience Tests', () => {
 -h
 +H
  i`;
-      
+
       const result = applyDiff(original, diff);
       expect(result).toBe('a\nb\nc\nD\ne\nf\ng\nH\ni\nj');
     });
@@ -203,7 +203,7 @@ describe('Unified Diff - Comprehensive LLM Resilience Tests', () => {
 -line1
 +line1 modified
  line2`;
-      
+
       // Should either apply correctly or throw
       try {
         const result = applyDiff(original, diff);
@@ -225,7 +225,7 @@ describe('Unified Diff - Comprehensive LLM Resilience Tests', () => {
  +++ but its not
 -normal end
 +modified end`;
-      
+
       const result = applyDiff(original, diff);
       expect(result).toBe('normal line\n--- this looks like a header\n+++ but its not\nmodified end');
     });
@@ -239,7 +239,7 @@ describe('Unified Diff - Comprehensive LLM Resilience Tests', () => {
 -@@ fake header @@
 +@@ real content @@
  line3`;
-      
+
       // Fixed: regex now only matches @@ at line start, so content with @@ works correctly
       const result = applyDiff(original, diff);
       expect(result).toBe('line1\n@@ real content @@\nline3');
@@ -253,7 +253,7 @@ describe('Unified Diff - Comprehensive LLM Resilience Tests', () => {
 -line with \\ backslash
 +line with \\\\ more backslash
  and \\\\ double`;
-      
+
       const result = applyDiff(original, diff);
       expect(result).toBe('line with \\\\ more backslash\nand \\\\ double');
     });
@@ -268,7 +268,7 @@ describe('Unified Diff - Comprehensive LLM Resilience Tests', () => {
 -Hello 👋 World
 +Hello 🌍 World
  How are you?`;
-      
+
       const result = applyDiff(original, diff);
       expect(result).toBe('Hello 🌍 World\nHow are you?');
     });
@@ -282,7 +282,7 @@ describe('Unified Diff - Comprehensive LLM Resilience Tests', () => {
 -中文
 +中文字符
  한국어`;
-      
+
       const result = applyDiff(original, diff);
       expect(result).toBe('日本語\n中文字符\n한국어');
     });
@@ -294,7 +294,7 @@ describe('Unified Diff - Comprehensive LLM Resilience Tests', () => {
 @@ -1 +1 @@
 -visible\u200Btext
 +visible\u200B\u200Btext`; // two zero-width spaces
-      
+
       const result = applyDiff(original, diff);
       expect(result).toBe('visible\u200B\u200Btext');
     });
@@ -311,7 +311,7 @@ describe('Unified Diff - Comprehensive LLM Resilience Tests', () => {
 -${longLine}
 +${'b'.repeat(10000)}
  short`;
-      
+
       // Security check prevents lines over 10000 characters
       expect(() => applyDiff(original, diff)).toThrow('Diff contains excessively long lines');
     });
@@ -319,17 +319,21 @@ describe('Unified Diff - Comprehensive LLM Resilience Tests', () => {
     it('should handle many small hunks', () => {
       const lines = Array.from({ length: 100 }, (_, i) => `line${i}`);
       const original = lines.join('\n');
-      
+
       // Create diff that changes every 10th line
-      let diff = `--- a/file.txt\n+++ b/file.txt\n`;
+      let diff = '--- a/file.txt\n+++ b/file.txt\n';
       for (let i = 0; i < 100; i += 10) {
         diff += `@@ -${i + 1},3 +${i + 1},3 @@\n`;
-        if (i > 0) diff += ` line${i - 1}\n`;
+        if (i > 0) {
+          diff += ` line${i - 1}\n`;
+        }
         diff += `-line${i}\n`;
         diff += `+line${i} modified\n`;
-        if (i < 99) diff += ` line${i + 1}\n`;
+        if (i < 99) {
+          diff += ` line${i + 1}\n`;
+        }
       }
-      
+
       const result = applyDiff(original, diff);
       expect(result.split('\n')[0]).toBe('line0 modified');
       expect(result.split('\n')[10]).toBe('line10 modified');
@@ -346,7 +350,7 @@ describe('Unified Diff - Comprehensive LLM Resilience Tests', () => {
 \\ No newline at end of file
 +line3
 +`;
-      
+
       const result = applyDiff(original, diff);
       expect(result).toBe('line1\nline2\nline3\n');
     });
@@ -364,7 +368,7 @@ describe('Unified Diff - Comprehensive LLM Resilience Tests', () => {
  d
  e
  f`; // LLM added extra 'f' that doesn't exist
-      
+
       try {
         const result = applyDiff(original, diff);
         expect(result).toContain('C modified');
@@ -382,7 +386,7 @@ describe('Unified Diff - Comprehensive LLM Resilience Tests', () => {
 -c
 +C modified
  d`; // Missing 'b' context
-      
+
       try {
         const result = applyDiff(original, diff);
         // If it works, check reasonable output
@@ -401,7 +405,7 @@ describe('Unified Diff - Comprehensive LLM Resilience Tests', () => {
 -  return true;
 +  return false; // Line 2: changed return value
  }`;
-      
+
       const result = applyDiff(original, diff);
       expect(result).toBe('function test() {\n  return false; // Line 2: changed return value\n}');
     });
@@ -416,7 +420,7 @@ describe('Unified Diff - Comprehensive LLM Resilience Tests', () => {
 +very long line that goes on and on
 +and on and should not be wrapped
  short line`;
-      
+
       const result = applyDiff(original, diff);
       expect(result).toBe('short line\nvery long line that goes on and on\nand on and should not be wrapped\nshort line');
     });
@@ -428,9 +432,9 @@ describe('Unified Diff - Comprehensive LLM Resilience Tests', () => {
 @@ -1,3 +1,3 @@
  {
 -    "indent": "spaces"
-+	"indent": "tabs"
++    "indent": "tabs"
  }`;
-      
+
       const result = applyDiff(original, diff);
       expect(result).toBe('{\n\t"indent": "tabs"\n}');
     });
@@ -444,7 +448,7 @@ describe('Unified Diff - Comprehensive LLM Resilience Tests', () => {
 @@ -1 +1 @@
 -before\0null\0after
 +before\0NULL\0after`;
-      
+
       const result = applyDiff(original, diff);
       expect(result).toBe('before\0NULL\0after');
     });
@@ -460,7 +464,7 @@ describe('Unified Diff - Comprehensive LLM Resilience Tests', () => {
 -mixed
 +MIXED
  weird`;
-      
+
       const result = applyDiff(original, diff);
       expect(result).toContain('MIXED');
     });
@@ -473,7 +477,7 @@ describe('Unified Diff - Comprehensive LLM Resilience Tests', () => {
 -normal\x1B[31mred\x1B[0m
 +normal\x1B[32mgreen\x1B[0m
  next`;
-      
+
       const result = applyDiff(original, diff);
       expect(result).toBe('normal\x1B[32mgreen\x1B[0m\nnext');
     });
@@ -487,7 +491,7 @@ describe('Unified Diff - Comprehensive LLM Resilience Tests', () => {
 @@ -1 +1 @@ trailing stuff here too
 -content
 +modified`;
-      
+
       try {
         const result = applyDiff(original, diff);
         expect(result).toBe('modified');
@@ -520,7 +524,7 @@ describe('Unified Diff - Comprehensive LLM Resilience Tests', () => {
 +added2
 +added3
  line2`;
-      
+
       const result = applyDiff(original, diff);
       expect(result).toBe('line1\nadded1\nadded2\nadded3\nline2');
     });
@@ -534,7 +538,7 @@ describe('Unified Diff - Comprehensive LLM Resilience Tests', () => {
 -delete1
 -delete2
  line2`;
-      
+
       const result = applyDiff(original, diff);
       expect(result).toBe('line1\nline2');
     });

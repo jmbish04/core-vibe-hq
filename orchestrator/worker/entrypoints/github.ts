@@ -14,10 +14,10 @@
  * ------------------------------------------------------------
  */
 
-import type { CoreEnv } from '@shared/types/env'
-import { GitHubClient } from '../clients/githubClient'
-import { BaseWorkerEntrypoint } from '@shared/base/workerEntrypoint'
-import { UpsertFileResponse, OpenPRResponse } from './types'
+import type { CoreEnv } from '@shared/types/env';
+import { GitHubClient } from '../clients/githubClient';
+import { BaseWorkerEntrypoint } from '@shared/base/workerEntrypoint';
+import { UpsertFileResponse, OpenPRResponse } from './types';
 
 export class GitHub extends BaseWorkerEntrypoint<CoreEnv> {
   // Database is initialized by the base class
@@ -31,13 +31,13 @@ export class GitHub extends BaseWorkerEntrypoint<CoreEnv> {
     order_id?: string
     task_uuid?: string
   }): Promise<UpsertFileResponse> {
-    const gh = new GitHubClient(this.env)
+    const gh = new GitHubClient(this.env);
     const ghParams = {
       ...params,
       owner: this.env.GITHUB_OWNER,
       repo: this.env.GITHUB_REPO,
-    }
-    const result = await gh.upsertFile(ghParams)
+    };
+    const result = await gh.upsertFile(ghParams);
 
     // Kysely query
     await this.db
@@ -54,9 +54,9 @@ export class GitHub extends BaseWorkerEntrypoint<CoreEnv> {
         order_id: params.order_id ?? null,
         task_uuid: params.task_uuid ?? null,
       })
-      .execute()
+      .execute();
 
-    return result
+    return result;
   }
 
   async openPR(params: {
@@ -67,13 +67,13 @@ export class GitHub extends BaseWorkerEntrypoint<CoreEnv> {
     order_id?: string
     task_uuid?: string
   }): Promise<OpenPRResponse> {
-    const gh = new GitHubClient(this.env)
+    const gh = new GitHubClient(this.env);
     const ghParams = {
       ...params,
       owner: this.env.GITHUB_OWNER,
       repo: this.env.GITHUB_REPO,
-    }
-    const result = await gh.openPR(ghParams)
+    };
+    const result = await gh.openPR(ghParams);
 
     // Kysely query
     await this.db
@@ -90,8 +90,8 @@ export class GitHub extends BaseWorkerEntrypoint<CoreEnv> {
         order_id: params.order_id ?? null,
         task_uuid: params.task_uuid ?? null,
       })
-      .execute()
+      .execute();
 
-    return result
+    return result;
   }
 }

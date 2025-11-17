@@ -5,7 +5,7 @@ This directory contains all project documentation. Use this file as a table of c
 ## Core Documentation
 
 ### [Agent Instructions](./development/agent-instructions.md)
-**Description**: **CRITICAL** - Rules and patterns for agent development, database architecture, service bindings, and code organization. **READ THIS FIRST** when developing new features. Contains rules about D1 access patterns, Drizzle/Kysely usage, and documentation standards.
+**Description**: **CRITICAL** - Rules and patterns for agent development, database architecture, service bindings, and code organization. **READ THIS FIRST** when developing new features. Contains rules about D1 access patterns, Drizzle/Kysely usage, documentation standards, and GitHub Actions workflow requirements.
 
 ### [Repository Structure Reference](./REPO_STRUCTURE_REFERENCE.md)
 **Description**: Master reference for repository directory structure. Defines where shared code, factory templates, worker code, and migrations should be located. Critical for Task Master and code generation.
@@ -23,6 +23,27 @@ This directory contains all project documentation. Use this file as a table of c
 
 ### [STAGING Patterns Adapted](./development/STAGING_PATTERNS_ADAPTED.md)
 **Description**: Documentation of patterns adapted from STAGING folder during migration.
+
+### [Production Status Report](./development/PRODUCTION_STATUS.md)
+**Description**: **CRITICAL** - Comprehensive production readiness assessment, blockers, task status, and recommended next steps. Updated regularly to track progress toward production deployment.
+
+### [PartyKit Production Readiness Plan](./development/PARTYKIT_PRODUCTION_READINESS_PLAN.md)
+**Description**: **CRITICAL** - Master execution plan for wrapping up Vibecode and shipping to production with PartyKit real-time features. Includes TLDR explaining why we spec'd this out and what it delivers, immediate actions (dependency fixes, lint cleanup), implementation checkpoints (Scheduled Automation, AI Provider Enablement, Extended Services), PartyServer/Partysocket integration strategy, risks assessment, and human-in-the-loop considerations. Use this as the master execution guide for Codex and Cursor agents.
+
+### [Testing Playbook](./development/testing-playbook.md)
+**Description**: **CRITICAL** - Comprehensive testing strategies, backup plans, and recovery procedures for release hardening. Includes test execution checklists, blocker resolution (e.g., Rollup binary issues), CI/CD integration, and emergency procedures.
+
+### [Continuous Improvement System](./development/continuous-improvement.md)
+**Description**: Framework for systematic analysis of bug patterns, tracking fix metrics, and implementing preventive improvements. Includes automation scripts, improvement backlog management, and success measurement.
+
+### [Improvement Backlog](./development/improvement-backlog.md)
+**Description**: Prioritized list of identified improvement opportunities with status tracking, success metrics, and implementation timelines.
+
+### [Release Hardening Report](./development/RELEASE_HARDENING_REPORT.md)
+**Description**: **CRITICAL** - Final pre-production audit results covering testing infrastructure, D1 database isolation, ORM surface area, and remediation plans. Includes go/no-go recommendations and post-deployment roadmap.
+
+### [Factory Orchestrator Tool](./development/factory-orchestrator-tool.md)
+**Description**: Migration guide for the TypeScript-based factory orchestrator CLI. Covers available commands, usage examples, and integration details for factory agents and container environments.
 
 ### AI Integration
 

@@ -101,6 +101,7 @@ export function DemoPage() {
             </CardContent>
           </Card>
         </div>
+        </div>
       </main>
     </AppLayout>
   );

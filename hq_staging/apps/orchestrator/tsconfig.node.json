@@ -1,0 +1,3 @@
+{
+	"extends": "../../../orchestrator/tsconfig.node.json"
+}

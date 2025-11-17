@@ -15,9 +15,9 @@
  * ------------------------------------------------------------
  */
 
-import type { CoreEnv } from '@shared/types/env'
-import { BaseWorkerEntrypoint } from '@shared/base/workerEntrypoint'
-import { LogResponse } from './types'
+import type { CoreEnv } from '@shared/types/env';
+import { BaseWorkerEntrypoint } from '@shared/base/workerEntrypoint';
+import { LogResponse } from './types';
 
 export class Logging extends BaseWorkerEntrypoint<CoreEnv> {
 
@@ -33,26 +33,26 @@ export class Logging extends BaseWorkerEntrypoint<CoreEnv> {
     order_id?: string
     task_uuid?: string
   }): Promise<LogResponse> {
-    const { source, operation, level, details, order_id, task_uuid } = params
-    
+    const { source, operation, level, details, order_id, task_uuid } = params;
+
     try {
       // Kysely query
       await this.db
         .insertInto('operation_logs')
         .values({
-          source: source,
+          source,
           order_id: order_id ?? null,
           task_uuid: task_uuid ?? null,
-          operation: operation,
-          level: level,
+          operation,
+          level,
           details: JSON.stringify(details ?? {}),
         })
-        .execute()
-      
-      return { ok: true }
+        .execute();
+
+      return { ok: true };
     } catch (e: any) {
-      console.error("Failed to write to operation_logs", e.message, JSON.stringify(params))
-      return { ok: false, error: e.message }
+      console.error('Failed to write to operation_logs', e.message, JSON.stringify(params));
+      return { ok: false, error: e.message };
     }
   }
 }

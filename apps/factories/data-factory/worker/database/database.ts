@@ -9,6 +9,7 @@
 
 import * as schema from './schema';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
+import type { OpsScanResult, OpsScanRecord, OpsIssueRecord } from '../../../../orchestrator/worker/services/ops/opsMonitorService';
 
 // Import orchestrator DataOps client type - comprehensive CRUD operations
 // All database operations MUST go through orchestrator RPC endpoints
@@ -77,6 +78,14 @@ type DataOpsClient = {
     deleteAppComment: (params: { commentId: string; userId?: string }) => Promise<{ ok: boolean }>;
 };
 
+// Import orchestrator OpsMonitorOps client type - operations scanning and monitoring
+type OpsMonitorOpsClient = {
+    scan: (params: { scope?: 'full' | 'incremental'; filters?: any }) => Promise<OpsScanResult>;
+    getRecentScans: (params: { limit?: number }) => Promise<OpsScanRecord[]>;
+    getOpenIssues: (params: { limit?: number }) => Promise<OpsIssueRecord[]>;
+    resolveIssue: (params: { id: number; resolution: string }) => Promise<{ success: true }>;
+};
+
 // ========================================
 // TYPE DEFINITIONS AND INTERFACES
 // ========================================
@@ -103,6 +112,7 @@ export type {
 export class DatabaseService {
     public readonly db: DrizzleD1Database<typeof schema>;
     private readonly dataOps: DataOpsClient;
+    private readonly opsMonitorOps: OpsMonitorOpsClient;
     private readonly enableReplicas: boolean;
 
     constructor(env: Env) {
@@ -117,6 +127,16 @@ export class DatabaseService {
         }
 
         this.dataOps = env.ORCHESTRATOR_DATA as unknown as DataOpsClient;
+
+        // Get ORCHESTRATOR_OPS_MONITOR service binding
+        if (!env.ORCHESTRATOR_OPS_MONITOR) {
+            throw new Error(
+                'ORCHESTRATOR_OPS_MONITOR service binding is required. ' +
+                'Ensure wrangler.jsonc extends @shared/base/wrangler.base.jsonc.'
+            );
+        }
+
+        this.opsMonitorOps = env.ORCHESTRATOR_OPS_MONITOR as unknown as OpsMonitorOpsClient;
         this.enableReplicas = env.ENABLE_READ_REPLICAS === 'true';
 
         // Create a compatibility proxy for Drizzle queries
@@ -180,6 +200,14 @@ export class DatabaseService {
      */
     public get dataOpsClient(): DataOpsClient {
         return this.dataOps;
+    }
+
+    /**
+     * Direct access to OpsMonitorOps RPC client for operations scanning and monitoring
+     * Use this for operations that are available in the orchestrator OpsMonitorOps entrypoint
+     */
+    public get opsMonitorOpsClient(): OpsMonitorOpsClient {
+        return this.opsMonitorOps;
     }
 }
 

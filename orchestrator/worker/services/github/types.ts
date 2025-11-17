@@ -14,7 +14,7 @@ export type GitHubUser = RestEndpointMethodTypes['users']['getByUsername']['resp
 // Use Octokit's built-in installation type
 export type GitHubInstallation = RestEndpointMethodTypes['apps']['getInstallation']['response']['data'];
 
-// Use Octokit's built-in app token type  
+// Use Octokit's built-in app token type
 export type GitHubAppToken = RestEndpointMethodTypes['apps']['createInstallationAccessToken']['response']['data'];
 
 // OAuth token response (not covered by Octokit types)
@@ -77,13 +77,13 @@ export interface GitHubServiceConfig {
 }
 
 export class GitHubServiceError extends Error {
-    constructor(
-        message: string,
+  constructor(
+    message: string,
         public readonly code: string,
         public readonly statusCode?: number,
-        public readonly originalError?: unknown
-    ) {
-        super(message);
-        this.name = 'GitHubServiceError';
-    }
+        public readonly originalError?: unknown,
+  ) {
+    super(message);
+    this.name = 'GitHubServiceError';
+  }
 }

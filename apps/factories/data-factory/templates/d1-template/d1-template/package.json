@@ -17,6 +17,9 @@
 		"publish": true
 	},
 	"devDependencies": {
+		"drizzle-kit": "^0.30.1",
+		"drizzle-orm": "^0.36.0",
+		"kysely-d1": "^0.4.0",
 		"typescript": "5.8.3",
 		"wrangler": "4.21.x"
 	},
@@ -24,8 +27,10 @@
 		"cf-typegen": "wrangler types",
 		"check": "tsc && wrangler deploy --dry-run",
 		"deploy": "wrangler deploy",
-		"dev": "pnpm seedLocalD1 && wrangler dev",
+		"dev": "pnpm migrate:local && wrangler dev",
 		"predeploy": "wrangler d1 migrations apply DB --remote",
-		"seedLocalD1": "wrangler d1 migrations apply DB --local"
+		"migrate:generate": "drizzle-kit generate",
+		"migrate:local": "wrangler d1 migrations apply DB --local",
+		"migrate:remote": "wrangler d1 migrations apply DB --remote"
 	}
 }

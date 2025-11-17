@@ -168,7 +168,154 @@ export type {
 export type { RateLimitError } from "worker/services/rate-limit/errors";
 export type { AgentPreviewResponse, CodeGenArgs } from 'worker/api/controllers/agent/types';
 export type { RateLimitErrorResponse } from 'worker/api/responses';
-export { RateLimitExceededError, SecurityError, SecurityErrorType } from 'shared/types/errors';
+export { RateLimitExceededError, SecurityError, SecurityErrorType } from '@shared/types/errors';
+
+// HIL (Human-in-the-Loop) API Types
+export type {
+  GetHilRequestsParams,
+  GetHilRequestsResponse,
+  GetHilRequestResponse,
+  SubmitHilResponseParams,
+  UpdateHilStatusParams,
+  SubmitHilResponseResponse,
+  UpdateHilStatusResponse
+} from 'worker/entrypoints/HilOps';
+
+// Health Check API Types
+export interface HealthCheckSummary {
+	totalChecks: number;
+	lastCompletedAt: string | null;
+	lastStatus: string | null;
+	lastHealthScore: number | null;
+}
+
+export interface HealthCheckSummaryResponse {
+	ok: boolean;
+	summary: HealthCheckSummary;
+	latest: HealthCheckStatusResponse | null;
+}
+
+export interface WorkerInfo {
+	name: string;
+	type: string;
+	url: string | null;
+	binding: string | null;
+}
+
+export interface WorkersResponse {
+	ok: boolean;
+	workers: WorkerInfo[];
+}
+
+export interface WorkerHealthResult {
+	worker_check_uuid: string;
+	worker_name: string;
+	worker_type: string;
+	status: string;
+	overall_status: string | null;
+	health_score: number | null;
+	error_message: string | null;
+	created_at: string;
+	completed_at: string | null;
+}
+
+export interface HealthCheckStatusResponse {
+	health_check_uuid: string;
+	status: string;
+	total_workers: number;
+	completed_workers: number;
+	passed_workers: number;
+	failed_workers: number;
+	overall_health_score: number;
+	ai_analysis?: string;
+	ai_recommendations?: string;
+	worker_results: WorkerHealthResult[];
+}
+
+export interface HealthCheckStatusData {
+	ok: boolean;
+	result: HealthCheckStatusResponse;
+}
+
+export interface HealthCheckHistoryItem {
+	health_check_uuid: string;
+	status: string;
+	trigger_type: string;
+	trigger_source: string;
+	total_workers: number;
+	completed_workers: number;
+	passed_workers: number;
+	failed_workers: number;
+	overall_health_score: number;
+	created_at: string;
+	completed_at: string | null;
+}
+
+export interface HealthCheckHistoryResponse {
+	ok: boolean;
+	history: {
+		health_checks: HealthCheckHistoryItem[];
+		total_count: number;
+		page: number;
+		limit: number;
+	};
+}
+
+export interface InitiateHealthCheckParams {
+	trigger_type?: string;
+	trigger_source?: string;
+	timeout_minutes?: number;
+	include_unit_tests?: boolean;
+	include_performance_tests?: boolean;
+	include_integration_tests?: boolean;
+	worker_filters?: string[];
+}
+
+export interface InitiateHealthCheckResponse {
+	ok: boolean;
+	result: {
+		health_check_uuid: string;
+		status: string;
+		total_workers: number;
+		message: string;
+	};
+}
+
+// Analytics API Types
+export interface AnalyticsTrendsDataPoint {
+	timestamp: string;
+	value: number;
+	change?: number;
+	changePercent?: number;
+}
+
+export interface AnalyticsTrendsSummary {
+	total: number;
+	average: number;
+	min: number;
+	max: number;
+	trend: 'increasing' | 'decreasing' | 'stable';
+	changePercent: number;
+}
+
+export interface AnalyticsTrendsResponse {
+	ok: boolean;
+	result: {
+		metric: string;
+		timeframe: string;
+		interval: string;
+		dataPoints: AnalyticsTrendsDataPoint[];
+		summary: AnalyticsTrendsSummary;
+	};
+}
+
+export interface AnalyticsTrendsParams {
+	metric: 'events' | 'success_rate' | 'avg_duration' | 'error_rate';
+	timeframe?: '1h' | '24h' | '7d' | '30d' | '90d';
+	interval?: '1m' | '5m' | '15m' | '1h' | '1d';
+	eventTypes?: string;
+	patchIds?: string;
+}
 
 export type { AIModels } from 'worker/agents/inferutils/config.types';
 // Model selection types
