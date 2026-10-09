@@ -10,7 +10,7 @@ on:
 
 jobs:
   deploy-unit-test-specialist:
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.pull_request.head.repo.full_name && github.event.pull_request.head.repo.full_name != github.repository && 'ubuntu-latest' || fromJSON('["self-hosted","Linux","X64","proxmox-actions"]') }}
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
@@ -32,7 +32,7 @@ jobs:
           workingDirectory: apps/specialists/unit-test-specialist
 
   deploy-cloud-worker-retrofit:
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.pull_request.head.repo.full_name && github.event.pull_request.head.repo.full_name != github.repository && 'ubuntu-latest' || fromJSON('["self-hosted","Linux","X64","proxmox-actions"]') }}
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
@@ -54,7 +54,7 @@ jobs:
           workingDirectory: apps/specialists/cloud-worker-retrofit
 
   deploy-cloudflare-expert:
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.pull_request.head.repo.full_name && github.event.pull_request.head.repo.full_name != github.repository && 'ubuntu-latest' || fromJSON('["self-hosted","Linux","X64","proxmox-actions"]') }}
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
@@ -76,7 +76,7 @@ jobs:
           workingDirectory: apps/specialists/cloudflare-expert
 
   deploy-frontend-testing-specialist:
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.pull_request.head.repo.full_name && github.event.pull_request.head.repo.full_name != github.repository && 'ubuntu-latest' || fromJSON('["self-hosted","Linux","X64","proxmox-actions"]') }}
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
@@ -98,7 +98,7 @@ jobs:
           workingDirectory: apps/specialists/frontend-testing-specialist
 
   deploy-health-specialist:
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.pull_request.head.repo.full_name && github.event.pull_request.head.repo.full_name != github.repository && 'ubuntu-latest' || fromJSON('["self-hosted","Linux","X64","proxmox-actions"]') }}
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4

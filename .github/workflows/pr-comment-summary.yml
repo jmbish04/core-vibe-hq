@@ -20,7 +20,7 @@ jobs:
     if: >
       github.event.comment.user.login != 'jmbish04' &&
       github.event.issue.pull_request != null
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.pull_request.head.repo.full_name && github.event.pull_request.head.repo.full_name != github.repository && 'ubuntu-latest' || fromJSON('["self-hosted","Linux","X64","proxmox-actions"]') }}
 
     steps:
       - name: Wait 30 seconds to batch comments
