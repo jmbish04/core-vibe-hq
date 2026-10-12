@@ -1,0 +1,346 @@
+#!/usr/bin/env bash
+# pull-agents — sync the machine-wide agent briefings from jmbish04/colby-ecosystem
+# into THIS repo, right-sized to what the repo actually is.
+#
+#   pull-agents                  detect, download, rewrite the managed block in AGENTS.md
+#   pull-agents --list           print the file set and the evidence for each choice
+#   pull-agents --dry-run        --list, plus what would be written, but write nothing
+#   pull-agents --force-scripts  also overwrite a scripts/ file that is not ours
+#   pull-agents install-hooks    post-merge + post-checkout hooks that re-run this script
+#
+# WHY: the briefings live in $HOME, which is exactly where a cloud session, a CI runner
+# or another checkout cannot see them. A repo with no copy is a repo where the rules
+# silently do not apply, and "did not have the briefing" reads like "ignored it".
+#
+# WHAT IT TOUCHES
+#   .agents/ecosystem/*.md   the synced briefings (overwritten every run)
+#   .agents/ecosystem/pull-agents  a copy of this script, so hooks and CI run one version
+#   .agents/ecosystem/MANAGED      every path this script owns, so the workflow can
+#                            `git add` exactly those and nothing else
+#   scripts/*.mjs            the default local scripts, right-sized the same way the
+#                            briefings are. Only files carrying the managed banner are
+#                            overwritten; an unmanaged file of the same name is left
+#                            alone and named, unless --force-scripts
+#   AGENTS.md                ONLY inside the delimited managed block. Everything outside
+#                            it is left byte-for-byte alone, so the effective briefing is
+#                            local AGENTS.md + colby-ecosystem's.
+#
+# AUTH: colby-ecosystem is PRIVATE, so a token is required.
+#   local   gh auth login          (this script shells out to `gh api`)
+#   CI      GH_TOKEN: ${{ secrets.COLBY_ECOSYSTEM_TOKEN }} — a PAT with read access to
+#           jmbish04/colby-ecosystem. A workflow's own GITHUB_TOKEN cannot read another
+#           repository; that failure is a 404, not a 403, so it is named explicitly below.
+set -euo pipefail
+
+SOURCE_REPO="${COLBY_ECOSYSTEM_SOURCE:-jmbish04/colby-ecosystem}"
+SOURCE_REF="${COLBY_ECOSYSTEM_REF:-main}"
+DEST_REL=".agents/ecosystem"
+BEGIN_MARK="<!-- BEGIN colby-ecosystem: managed by pull-agents, do not edit inside this block -->"
+END_MARK="<!-- END colby-ecosystem -->"
+
+# Always loaded: the parent briefing, the control plane, and the git/PR rules. Every repo
+# has PRs and every repo's work is tracked, so these are not conditional.
+ALWAYS=(AGENTS.md AGENTS-maestro.md AGENTS-github.md)
+
+die() { printf 'pull-agents: %s\n' "$*" >&2; exit 1; }
+note() { [ -n "${QUIET:-}" ] || printf '%s\n' "$*"; }
+
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || die "not inside a git repository"
+cd "$ROOT"
+
+command -v gh >/dev/null 2>&1 || die "gh is not on PATH. Install it, or run this from a machine that has it."
+
+fetch() {                              # fetch <path-in-source-repo> -> stdout
+  local path="$1" out status
+  if out="$(gh api "repos/${SOURCE_REPO}/contents/${path}?ref=${SOURCE_REF}" --jq '.content' 2>&1)"; then
+    printf '%s' "$out" | base64 -d
+    return 0
+  fi
+  status="$out"
+  case "$status" in
+    *"Not Found"*|*"404"*)
+      die "cannot read ${SOURCE_REPO}/${path}.
+  ${SOURCE_REPO} is private, so a token that cannot see it gets a 404, not a 403.
+  In CI:    set GH_TOKEN to a PAT with read access (secrets.COLBY_ECOSYSTEM_TOKEN).
+            The workflow's own GITHUB_TOKEN cannot read another repository.
+  Locally:  gh auth status — and check the active account can see ${SOURCE_REPO}." ;;
+    *) die "gh api failed for ${path}: ${status}" ;;
+  esac
+}
+
+# ---------------------------------------------------------------- what this repo is
+# Evidence comes from the repo's own contents. Tracked files first: it is fast, and it
+# never mistakes a vendored dependency for the project's own stack.
+repo_paths() {
+  local list
+  list="$(git ls-files 2>/dev/null || true)"
+  if [ -z "$list" ]; then
+    list="$(find . -maxdepth 3 -type f -not -path './.git/*' -not -path './node_modules/*' 2>/dev/null | sed 's|^\./||')"
+  fi
+  printf '%s\n' "$list"
+}
+
+# grep a handful of small manifests, never the whole tree
+manifest_text() {
+  local f
+  for f in package.json pyproject.toml requirements.txt wrangler.jsonc wrangler.toml wrangler.json; do
+    [ -f "$f" ] && cat "$f"
+  done
+  true
+}
+
+SELECTED=""          # "file<TAB>reason" lines
+select_file() {      # select_file <name> <reason>
+  case "$SELECTED" in
+    *"$1"$'\t'*) return 0 ;;
+  esac
+  SELECTED="${SELECTED}${1}"$'\t'"${2}"$'\n'
+}
+
+detect() {
+  local paths manifests f reason
+  paths="$(repo_paths)"
+  manifests="$(manifest_text)"
+
+  for f in "${ALWAYS[@]}"; do select_file "$f" "always"; done
+
+  if reason="$(printf '%s\n' "$paths" | grep -m1 -E '(^|/)(wrangler\.(jsonc|toml|json)|\.dev\.vars)$' || true)"; [ -n "$reason" ]; then
+    select_file AGENTS-cloudflare-workers.md "$reason"
+  fi
+  if reason="$(printf '%s\n' "$paths" | grep -m1 -E '(^|/)(astro|next|vite|svelte|nuxt)\.config\.[cm]?[jt]s$|(^|/)tailwind\.config\.|(^|/)components\.json$|\.(tsx|jsx|astro|svelte|vue)$' || true)"; [ -n "$reason" ]; then
+    select_file AGENTS-frontend.md "$reason"
+  fi
+  if reason="$(printf '%s\n' "$paths" | grep -m1 -E '(^|/)(pyproject\.toml|setup\.py|requirements[^/]*\.txt)$|\.py$' || true)"; [ -n "$reason" ]; then
+    select_file AGENTS-python.md "$reason"
+  fi
+  if reason="$(printf '%s\n' "$paths" | grep -m1 -iE '(^|/)mcp([-_/.]|$)|mcp-server' || true)"; [ -n "$reason" ]; then
+    select_file AGENTS-mcp.md "$reason"
+  elif printf '%s' "$manifests" | grep -qi 'modelcontextprotocol'; then
+    select_file AGENTS-mcp.md "modelcontextprotocol in a manifest"
+  fi
+  if printf '%s' "$manifests" | grep -qE '@anthropic-ai|"openai"|"@ai-sdk|"ai":|anthropic|workers-ai|"ai"[[:space:]]*:[[:space:]]*\{'; then
+    select_file AGENTS-ai.md "an AI SDK or Workers AI binding in a manifest"
+  fi
+  if reason="$(printf '%s\n' "$paths" | grep -m1 -E '\.plist$|Launch(Agents|Daemons)' || true)"; [ -n "$reason" ]; then
+    select_file AGENTS-macos.md "$reason"
+  fi
+  if reason="$(printf '%s\n' "$paths" | grep -m1 -i 'proxmox' || true)"; [ -n "$reason" ]; then
+    select_file AGENTS-proxmox.md "$reason"
+  fi
+
+  # A repo may state what the detector cannot see. include/exclude are explicit and win.
+  if [ -f .agents/ecosystem.json ]; then
+    local inc exc
+    inc="$(python3 -c 'import json,sys;d=json.load(open(".agents/ecosystem.json"));print("\n".join(d.get("include",[])))' 2>/dev/null || true)"
+    exc="$(python3 -c 'import json,sys;d=json.load(open(".agents/ecosystem.json"));print("\n".join(d.get("exclude",[])))' 2>/dev/null || true)"
+    while IFS= read -r f; do [ -n "$f" ] && select_file "$f" "include in .agents/ecosystem.json"; done <<< "$inc"
+    while IFS= read -r f; do
+      [ -n "$f" ] || continue
+      SELECTED="$(printf '%s' "$SELECTED" | grep -v "^${f}"$'\t' || true)"$'\n'
+    done <<< "$exc"
+  fi
+}
+
+selected_files() { printf '%s' "$SELECTED" | awk -F'\t' 'NF{print $1}'; }
+
+cmd_list() {
+  detect
+  printf '%s pulls these from %s@%s:\n\n' "$(basename "$ROOT")" "$SOURCE_REPO" "$SOURCE_REF"
+  printf '%s' "$SELECTED" | awk -F'\t' 'NF{printf "  %-32s %s\n", $1, $2}'
+}
+
+# ---------------------------------------------------------------- write
+render_block() {
+  local f
+  printf '%s\n' "$BEGIN_MARK"
+  printf '## Machine-wide agent briefings (synced — do not edit here)\n\n'
+  printf 'Pulled from `%s` by `.github/workflows/agents-sync.yml`, right-sized to this\n' "$SOURCE_REPO"
+  printf "repo's stack. Read them before your first load-bearing change; where they and the\n"
+  printf 'notes below this block disagree, they win. Edit them in `%s`, never here.\n\n' "$SOURCE_REPO"
+  for f in $(selected_files); do printf '@%s/%s\n' "$DEST_REL" "$f"; done
+  printf '\n'
+  printf 'The scripts in `%s/` carrying a `%s` banner come from there too.\n' "$SCRIPTS_DIR" "$MANAGED_BANNER"
+  printf 'Use them rather than writing another: `scripts/gh.mjs` is the GitHub entry point\n'
+  printf 'and wraps the `gh-tools` CLI, which already solves the auth this machine trips on.\n\n'
+  printf 'Work is tracked in **colby-maestro** (`https://colby-maestro.hacolby.workers.dev/mcp`,\n'
+  printf 'bearer `$(tokens show WORKER_API_KEY --value-only)`) — never in this repo and never\n'
+  printf 'in colby-ecosystem, which only stores config. Refresh this block with\n'
+  printf '`%s/pull-agents`.\n' "$DEST_REL"
+  printf '%s\n' "$END_MARK"
+}
+
+write_block() {
+  local blockfile="$1" target="AGENTS.md" tmp
+  if [ ! -f "$target" ]; then
+    { cat "$blockfile"; printf '\n# %s\n\nRepo-local agent notes go below the block above.\n' "$(basename "$ROOT")"; } > "$target"
+    note "created AGENTS.md with the managed block"
+    return 0
+  fi
+  tmp="$(mktemp)"
+  if grep -qF "$BEGIN_MARK" "$target"; then
+    awk -v b="$BEGIN_MARK" -v e="$END_MARK" -v bf="$blockfile" '
+      index($0, b) { inb = 1; while ((getline l < bf) > 0) print l; close(bf); next }
+      index($0, e) { inb = 0; next }
+      !inb        { print }
+    ' "$target" > "$tmp"
+  else
+    { cat "$blockfile"; printf '\n'; cat "$target"; } > "$tmp"
+  fi
+  if cmp -s "$tmp" "$target"; then rm -f "$tmp"; note "AGENTS.md block already current"; return 0; fi
+  mv "$tmp" "$target"
+  note "rewrote the managed block in AGENTS.md"
+}
+
+# ---------------------------------------------------------------- default scripts
+# Agents keep hand-rolling a scripts/gh.mjs and re-solving GitHub auth badly, so the
+# canonical one ships with the briefings. The set is right-sized the same way the
+# chapters are: a Python repo has no use for the D1 migration fixer.
+#
+# MANAGED_BANNER is the contract. A file carrying it is ours and is overwritten; a file
+# of the same name without it belongs to the repo and is left alone, because silently
+# replacing someone's script is how this tool would become the thing people disable.
+MANAGED_BANNER="colby-ecosystem: managed script"
+SCRIPTS_DIR="scripts"
+
+scripts_for_repo() {              # -> one script name per line
+  printf 'gh.mjs\n'
+  case $'\n'"$(selected_files)"$'\n' in
+    *$'\n'AGENTS-cloudflare-workers.md$'\n'*) printf 'fix-d1-migrations.mjs\n' ;;
+  esac
+  case $'\n'"$(selected_files)"$'\n' in
+    *$'\n'AGENTS-frontend.md$'\n'*) printf 'reui.mjs\nui-guard.mjs\n' ;;
+  esac
+}
+
+# NOTE: this function's STDOUT is the manifest, so every message it prints must go to
+# stderr. Measured 2026-09-28: a `kept ... not one of ours` warning landed in
+# .agents/ecosystem/MANAGED as if it were a path, which both hid the warning from the
+# human and would have made the workflow `git add` a sentence.
+sync_scripts() {                  # sync_scripts <force> -> writes MANAGED-able paths to stdout
+  local force="$1" name dest tmp
+  mkdir -p "$SCRIPTS_DIR"
+  while IFS= read -r name; do
+    [ -n "$name" ] || continue
+    dest="$SCRIPTS_DIR/$name"
+    if [ -e "$dest" ] && [ "$force" != "1" ] && ! grep -qF "$MANAGED_BANNER" "$dest"; then
+      note "kept $dest — it is not one of ours. Re-run with --force-scripts to replace it." >&2
+      continue
+    fi
+    tmp="$(mktemp)"
+    fetch "templates/$SCRIPTS_DIR/$name" > "$tmp"
+    [ -s "$tmp" ] || die "fetched templates/$SCRIPTS_DIR/$name but it is empty"
+    mv "$tmp" "$dest"; chmod 755 "$dest"
+    printf '%s\n' "$dest"
+  done < <(scripts_for_repo)
+
+  # tokens.mjs is NOT vendored here. Its one source is ~/bin/tokens_cli/sdk/tokens.mjs,
+  # and a copy in this repo would be a second copy to keep in step — which AGENTS.md
+  # names as the mistake. Scaffold it from the CLI when the CLI is here; a CI runner has
+  # no tokens CLI and no secrets to reach anyway, so it simply skips.
+  if command -v tokens >/dev/null 2>&1; then
+    if [ ! -e "$SCRIPTS_DIR/tokens.mjs" ] || grep -qF "requireSecret" "$SCRIPTS_DIR/tokens.mjs" 2>/dev/null; then
+      if tokens agent-onboarding --scaffold-mjs "$SCRIPTS_DIR/tokens.mjs" >/dev/null 2>&1; then
+        printf '%s\n' "$SCRIPTS_DIR/tokens.mjs"
+      else
+        note "could not scaffold $SCRIPTS_DIR/tokens.mjs — run: tokens agent-onboarding --scaffold-mjs $SCRIPTS_DIR/tokens.mjs" >&2
+      fi
+    fi
+  fi
+}
+
+FORCE_SCRIPTS=0
+
+cmd_sync() {
+  local dry="${1:-}"
+  detect
+  local files; files="$(selected_files)"
+  [ -n "$files" ] || die "detection selected nothing — that is a bug, not an empty repo"
+
+  local blockfile; blockfile="$(mktemp)"; render_block > "$blockfile"
+
+  if [ "$dry" = "--dry-run" ]; then
+    cmd_list; printf '\nwould write %s/{%s}\nand this block into AGENTS.md:\n\n' \
+      "$DEST_REL" "$(printf '%s' "$files" | paste -sd, -)"
+    cat "$blockfile"; rm -f "$blockfile"; return 0
+  fi
+
+  # Fetch into a staging directory first. `fetch f > dest` truncates dest BEFORE the
+  # fetch can fail, so a token that cannot read the source used to leave a zero-byte
+  # AGENTS.md behind — present, empty, and indistinguishable from a real one. Measured
+  # 2026-09-28: a 51KB briefing became 0 bytes on the first failed call.
+  local stage; stage="$(mktemp -d)"
+  local f n=0
+  for f in $files; do
+    fetch "$f" > "$stage/$f"
+    [ -s "$stage/$f" ] || die "fetched $f but it is empty — refusing to write a half-synced tree"
+    n=$((n + 1))
+  done
+
+  mkdir -p "$DEST_REL"
+  for f in $files; do mv "$stage/$f" "$DEST_REL/$f"; done
+  rm -rf "$stage"
+
+  # Prune what this repo no longer needs. A stale chapter is not harmless: the whole
+  # point is that the set is right-sized, and a leftover 79KB Cloudflare chapter in a
+  # Python repo is the failure this script exists to prevent.
+  local existing
+  for existing in "$DEST_REL"/AGENTS*.md; do
+    [ -e "$existing" ] || continue
+    case $'\n'"$files"$'\n' in
+      *$'\n'"$(basename "$existing")"$'\n'*) ;;
+      *) rm -f "$existing"; note "pruned $(basename "$existing") — this repo no longer matches it" ;;
+    esac
+  done
+  # One version of the script for hooks and CI, versioned with the briefings it wrote.
+  if [ -f "${BASH_SOURCE[0]}" ] && ! cmp -s "${BASH_SOURCE[0]}" "$DEST_REL/pull-agents"; then
+    cp "${BASH_SOURCE[0]}" "$DEST_REL/pull-agents"; chmod 755 "$DEST_REL/pull-agents"
+  fi
+  printf 'Synced from %s@%s. Managed by .github/workflows/agents-sync.yml — edits here are overwritten.\n' \
+    "$SOURCE_REPO" "$SOURCE_REF" > "$DEST_REL/README.md"
+
+  # The scripts, and the manifest of everything this run owns. The workflow adds exactly
+  # these paths: `git add -A scripts` would sweep in whatever else the repo keeps there.
+  local managed; managed="$(sync_scripts "$FORCE_SCRIPTS")"
+  {
+    printf '%s\n' "$DEST_REL" "AGENTS.md"
+    printf '%s\n' "$managed"
+  } | awk 'NF' | while IFS= read -r _p; do
+    # Only real paths reach the manifest. The workflow feeds it straight to `git add`,
+    # so one stray line there is a failed run in every repo at once.
+    [ -e "$_p" ] && printf '%s\n' "$_p"
+  done > "$DEST_REL/MANAGED"
+
+  write_block "$blockfile"; rm -f "$blockfile"
+  note "pulled $n briefing(s) into $DEST_REL$(printf '%s' "$managed" | awk 'NF' | wc -l | awk '{printf ", %s script(s) into scripts/", $1}')"
+}
+
+cmd_install_hooks() {
+  local dir; dir="$(git rev-parse --git-path hooks)"
+  mkdir -p "$dir"
+  local h
+  for h in post-merge post-checkout; do
+    cat > "$dir/$h" <<'HOOK'
+#!/usr/bin/env bash
+# installed by pull-agents install-hooks — keeps .agents/ecosystem/ fresh locally.
+# Fail-soft on purpose: no network, no gh, no token must never block a checkout.
+root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+[ -x "$root/.agents/ecosystem/pull-agents" ] || exit 0
+QUIET=1 "$root/.agents/ecosystem/pull-agents" >/dev/null 2>&1 || true
+HOOK
+    chmod 755 "$dir/$h"
+  done
+  note "installed post-merge and post-checkout in $dir"
+  note "hooks are not cloned: run this once per clone and per worktree"
+}
+
+for _arg in "$@"; do [ "$_arg" = "--force-scripts" ] && FORCE_SCRIPTS=1; done
+set -- $(printf '%s\n' "$@" | grep -v '^--force-scripts$' || true)
+
+case "${1:-sync}" in
+  sync|"")        cmd_sync ;;
+  --dry-run)      cmd_sync --dry-run ;;
+  --list|list)    cmd_list ;;
+  install-hooks)  cmd_install_hooks ;;
+  -h|--help|help) sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//' ;;
+  *)              die "unknown command: $1 (try: sync, --list, --dry-run, install-hooks)" ;;
+esac
