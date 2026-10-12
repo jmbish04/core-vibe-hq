@@ -1,0 +1,84 @@
+# agents-sync — drop this at .github/workflows/agents-sync.yml in any repo Justin works in.
+#
+# It pulls the machine-wide agent briefings from jmbish04/colby-ecosystem, right-sized to
+# what this repo actually is, and commits them. Because they are committed, a plain
+# `git clone` already has them — whoever clones next needs no bootstrap step.
+#
+# Self-contained on purpose. A reusable workflow living in a PRIVATE repo only works after
+# that repo's Actions access is opened to the account; this needs no such setting.
+#
+# ONE SECRET, set it once per repo:
+#   gh secret set COLBY_ECOSYSTEM_TOKEN --repo <owner>/<repo>
+# A PAT with read access to jmbish04/colby-ecosystem. The workflow's own GITHUB_TOKEN
+# cannot read another repository — that failure arrives as a 404, not a 403, which is why
+# pull-agents names the secret in its error.
+#
+# Value: `tokens show GH_ECOSYSTEM_READ_TOKEN --value-only` if that exists, otherwise
+# `tokens show GH_TOKEN --value-only`. A fine-grained PAT with contents:read on
+# colby-ecosystem alone is better; it belongs in the tokens CLI only, since no Worker
+# reads it and the Cloudflare Secret Store has a hard 100-secret ceiling.
+
+name: agents-sync
+
+on:
+  push:
+    branches: [main, master]
+  schedule:
+    - cron: "17 9 * * 1" # the briefings change without this repo changing
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: agents-sync-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      # ref_name, not the bare SHA: a detached HEAD cannot push.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Pull the right-sized briefings
+        env:
+          GH_TOKEN: ${{ secrets.COLBY_ECOSYSTEM_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "COLBY_ECOSYSTEM_TOKEN is not set on this repo." >&2
+            echo "  gh secret set COLBY_ECOSYSTEM_TOKEN --repo ${{ github.repository }}" >&2
+            exit 1
+          fi
+          gh api repos/jmbish04/colby-ecosystem/contents/scripts/pull-agents \
+            --jq .content | base64 -d > /tmp/pull-agents
+          bash /tmp/pull-agents --list
+          bash /tmp/pull-agents
+
+      - name: Commit if anything changed
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # -f: several repos .gitignore `.agents`, and `git add` then refuses the whole
+          # step with exit 1. These files are deliberately committed — a repo-local ignore
+          # must not silently defeat the sync. Measured 2026-09-28 on agentic-inbox and
+          # core-github-api: both runs died here with "paths are ignored by .gitignore".
+          git add -A -f .agents AGENTS.md
+          # pull-agents also writes scripts/, and lists everything it owns in MANAGED.
+          # `git add -A scripts` would sweep in whatever else the repo keeps there, so
+          # the manifest is the precise list — and pull-agents drops any line that is
+          # not a real path, because one stray line here fails the run in every repo.
+          if [ -s .agents/ecosystem/MANAGED ]; then
+            tr '\n' '\0' < .agents/ecosystem/MANAGED | xargs -0 git add -f --
+          fi
+          if git diff --cached --quiet; then
+            echo "briefings already current"
+            exit 0
+          fi
+          git commit -m "chore(agents): sync right-sized briefings from colby-ecosystem"
+          # One retry: the branch may have moved while this ran.
+          git push || { git pull --rebase -q && git push; }
