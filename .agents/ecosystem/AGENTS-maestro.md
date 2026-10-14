@@ -291,6 +291,47 @@ final worklog entry says what changed and what is left, and anything the next
 agent would want is written where it will be read. **An unfinished task left
 `in_progress` by a session that ended is worse than one never created.**
 
+# A design lives in a Maestro plan and in the repo. Both, in full.
+
+**A design, a spec or an implementation plan is written twice, and both copies
+carry the whole text:**
+
+1. **A Colby Maestro plan** in the project it belongs to. This is the working
+   copy: Justin reads it, comments on it, and its headings are what epics and
+   tasks attach to. Maestro has a whole interface for plans; a design that is
+   not in it is a design he has to go and find.
+2. **The repo markdown** the superpowers skills already write
+   (`docs/superpowers/specs/…`, `docs/superpowers/plans/…`). This is the copy
+   kept with the code, so a clone or a cloud session has it.
+
+Each names the other in its first lines.
+
+**A plan that is a summary pointing at a PR does not count.** Measured
+2026-10-12: two designs of 88 KB and 42 KB went into repo markdown while their
+Maestro plan held one paragraph per section and a link. Justin's response: "why
+are you generating docs for this stuff? Its what colby-maestro is for". The
+superpowers skills say nothing about Maestro, so an agent following them alone
+writes only the file. This section is what closes that gap.
+
+How to do it without losing anything:
+
+- Create with `POST /api/plans` (markdown body); revise with
+  `POST /api/plans/{id}/revisions`. A revision never overwrites.
+- **A heading keeps its section id across a revision as long as its text is
+  unchanged,** so tasks attached to it stay attached. Keep the headings tasks
+  hang from; add new ones freely.
+- Mermaid diagrams, code fences and tables survive the round trip (measured:
+  6 of 6 diagrams, 15 of 15 tables, byte count within 1).
+- Send a large document from a file: `curl --data-binary @body.json`. Do not
+  paste it into the code-mode tool, which means typing the whole document as
+  tool input. Do not use Python's `urllib`: Cloudflare refuses its signature
+  with error 1010. `curl` is accepted.
+- **Read it back.** Compare the stored byte count, the number of diagram and
+  code fences, and the number of tasks still attached to sections. A post that
+  returned 200 is not proof the plan is whole.
+
+---
+
 # Proposals — how a lesson learned becomes a change
 
 This is the part that compounds. A trap you hit at 3am is worth nothing if it

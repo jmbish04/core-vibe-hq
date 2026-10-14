@@ -693,6 +693,57 @@ in the data, opposite in meaning.
 
 ---
 
+# Data: the schema, the relationships, and a diagram. Every time.
+
+**Data is the most valuable thing these systems hold, and a record is worth only
+what it is connected to.** A row that cannot be tied to its project, its task and
+the session that wrote it is a row nobody can use later. As an application's
+tracking and relationships grow, so does what can be built on top of it. So data
+work gets surgical care, not a paragraph of prose.
+
+**Anything that stores, moves or reshapes data carries three things**: in the
+design before any code, and again in the PR. That means a new table, a new
+column, a JSON payload, a queue message, a file format, a cache key.
+
+1. **The schema, in the form the system enforces.** Drizzle table definitions
+   for a database. JSON Schema for a payload, generated from the Zod or Pydantic
+   source so there is one definition. Never a prose list of fields, and never a
+   sketch that "will be tightened at build time".
+2. **Every relationship, stated one by one.** For each identifier: the table and
+   column it points to, the cardinality (1:1, 1:M, M:N), what enforces it (a
+   foreign key, a unique index, or "derived through X"), and what happens on
+   delete. Every record names the Colby Maestro identifiers it belongs to:
+   project and task always, and session, plan section, milestone, sprint and PR
+   wherever they exist.
+3. **A Mermaid ER diagram** that shows the new or changed tables **together with
+   the existing tables they connect to**, with cardinality on every line. For a
+   payload, add where each part of it is written: a new table or an existing
+   one, and how that table is structured.
+
+**Four things follow from those, and each has been a real defect:**
+
+- **Say which existing tables you considered, and why each was or was not
+  reused.** A new table is a claim that nothing existing fits; show the search.
+- **A reference that does not resolve is an error at write time.** Never store
+  an orphan and never store an empty string where an id belongs.
+- **Derive, do not duplicate.** If a relationship is one join away, name the
+  join instead of storing a second copy that can disagree with the first.
+- **Follow the repo's own conventions**: its id types, its timestamp format,
+  how it declares foreign keys and deletes. Read three neighbouring schema files
+  before writing a fourth. Then give every access pattern its index.
+
+**A PR that touches a schema or migration file without all three is incomplete,**
+however good the code is. Worked example: the data section of
+`docs/superpowers/specs/2026-10-11-session-reports-design.md` in
+`jmbish04/colby-orchestrator`.
+
+**Measure before claiming a schema has no relationships.** Drizzle declares a
+foreign key two ways. A grep for `.references(` on colby-maestro returned 0 on
+2026-10-11 while the schemas held 27 `foreignKey({` declarations. One search
+form is not a search.
+
+---
+
 # Testing: a test that cannot fail is not a test
 
 The rule above — every check needs a test that makes it fail on purpose — was
