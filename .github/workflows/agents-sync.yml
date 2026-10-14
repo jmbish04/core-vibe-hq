@@ -36,7 +36,44 @@ concurrency:
 
 jobs:
   sync:
-    runs-on: ubuntu-latest
+    # WHICH RUNNER — decided per repo by an Actions VARIABLE, not by editing this file.
+    # GitHub Actions hosted minutes are FREE for public repos and BILLED for private ones,
+    # and on this account billing has lapsed: a private repo's job is refused before it
+    # starts (measured 2026-10-12 — runner_name "", steps 0, ~3s, annotation "recent
+    # account payments have failed"). 8 public repos succeeded and 4 private ones were
+    # refused on the same rollout: 100% correlation. So a private repo can only sync on a
+    # self-hosted runner.
+    #
+    # `jmbish04` is a USER account, not an org, so runners are registered PER REPO — there
+    # is no org pool. A blanket `runs-on: self-hosted` would therefore SIT QUEUED in any repo
+    # without one instead of failing, and a queued job is invisible: strictly worse than one
+    # that fails red in 3s. (GitHub's documented usage limits cancel a self-hosted job queued
+    # for 24 hours — not measured here, but it is a silent day either way.) Hence the
+    # variable, and hence the hosted fallback.
+    #
+    #   variable absent        -> ubuntu-latest   (today's behaviour; no regression, and it
+    #                                              recovers by itself when billing is fixed)
+    #   ["self-hosted","Linux","X64","proxmox-actions"]
+    #                          -> this repo's own pve-135-<repo> runner
+    #
+    # `gh-tools agents-sync` / `agents-rollout` is the only writer: it sets the variable
+    # where an ONLINE runner exists and DELETES it otherwise, so a repo that loses its
+    # runner falls back to hosted instead of sitting queued. The value is machine-generated JSON.
+    # A hand-mangled value makes fromJSON throw, which fails the job immediately — loud and
+    # visible, which is the failure mode we want over an invisible queue.
+    #
+    # Measured against GitHub's own expression engine (@actions/expressions 0.3.61):
+    # unset -> "ubuntu-latest", empty -> "ubuntu-latest", valid array -> the four labels,
+    # malformed -> throws. `&&` short-circuits (evaluator.js visitLogical breaks on a falsy
+    # left operand), so fromJSON is never reached when the variable is unset.
+    #
+    # DO NOT replace this with the fork guard from test.yml:
+    #   ${{ github.event.pull_request.head.repo.full_name && … || fromJSON('[…]') }}
+    # That is meaningful in test.yml, which runs on pull_request. This workflow subscribes
+    # to push, schedule and workflow_dispatch only, so github.event.pull_request is ALWAYS
+    # null, the guard is always falsy, and it is unconditional self-hosted in disguise —
+    # which is exactly what sits queued in a repo with no runner.
+    runs-on: ${{ vars.AGENTS_SYNC_RUNNER && fromJSON(vars.AGENTS_SYNC_RUNNER) || 'ubuntu-latest' }}
     steps:
       # ref_name, not the bare SHA: a detached HEAD cannot push.
       - uses: actions/checkout@v4
