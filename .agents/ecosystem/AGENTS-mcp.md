@@ -119,8 +119,8 @@ Bring numbers, not an idea:
 **If he says yes:** run a **complete audit** first — every tool, its schema size,
 its handler, its auth, who calls it — then derive a **comprehensive plan**, and
 only then file an **epic plus its child tasks** in Colby Maestro
-(`task_upsert_tool` with `parent_task_id`, or `POST /api/tasks`; remember REST
-wants `task_type` and `priority` explicitly). The epic carries the measured
+(via MCP `execute` passing `parent_task_id`, or `POST /api/tasks`; remember
+both want `task_type` and `priority` explicitly). The epic carries the measured
 before/after and the audit; each task is one shippable step. Rules for writing
 them: `~/AGENTS-maestro.md`.
 

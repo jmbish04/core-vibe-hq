@@ -161,7 +161,10 @@ render_block() {
   printf '\n'
   printf 'The scripts in `%s/` carrying a `%s` banner come from there too.\n' "$SCRIPTS_DIR" "$MANAGED_BANNER"
   printf 'Use them rather than writing another: `scripts/gh.mjs` is the GitHub entry point\n'
-  printf 'and wraps the `gh-tools` CLI, which already solves the auth this machine trips on.\n\n'
+  printf 'and wraps the `gh-tools` CLI, which already solves the auth this machine trips on.\n'
+  printf '`scripts/run.sh` is the verbose step runner: source it and put every step through\n'
+  printf '`run`, so a script that fails on its first line says so instead of reading as a\n'
+  printf 'success. `bash scripts/run.sh --self-check` proves its own checks can fail.\n\n'
   printf 'Work is tracked in **colby-maestro** (`https://colby-maestro.hacolby.workers.dev/mcp`,\n'
   printf 'bearer `$(tokens show WORKER_API_KEY --value-only)`) — never in this repo and never\n'
   printf 'in colby-ecosystem, which only stores config. Refresh this block with\n'
@@ -203,7 +206,10 @@ MANAGED_BANNER="colby-ecosystem: managed script"
 SCRIPTS_DIR="scripts"
 
 scripts_for_repo() {              # -> one script name per line
-  printf 'gh.mjs\n'
+  # run.sh goes everywhere: it is shell, so no stack excludes it, and the failure
+  # it prevents -- a script that errors on its first line and reads as a success --
+  # is language-agnostic.
+  printf 'gh.mjs\nrun.sh\n'
   case $'\n'"$(selected_files)"$'\n' in
     *$'\n'AGENTS-cloudflare-workers.md$'\n'*) printf 'fix-d1-migrations.mjs\n' ;;
   esac

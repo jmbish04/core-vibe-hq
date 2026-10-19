@@ -712,8 +712,8 @@ colby-maestro propose --kind agents-md \
 ```
 
 `--kind agents-md` files it for review under the `colby-ecosystem` project; tag
-the frontend ones **`reui`** so they can be found as a set. Same thing over MCP:
-`task_upsert_tool(project_key="colby-ecosystem", …, tags_csv="proposal,agents-md,reui")`.
+the frontend ones **`reui`** so they can be found as a set. When filing over MCP's `execute`,
+include `tags: ["proposal", "agents-md", "reui"]` in the task body.
 
 The lesson names the change, why the original choice was wrong, and where it was
 hit — never "we should be careful with ReUI". A correction Justin has made twice

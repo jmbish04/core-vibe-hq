@@ -16,6 +16,9 @@ notes below this block disagree, they win. Edit them in `jmbish04/colby-ecosyste
 The scripts in `scripts/` carrying a `colby-ecosystem: managed script` banner come from there too.
 Use them rather than writing another: `scripts/gh.mjs` is the GitHub entry point
 and wraps the `gh-tools` CLI, which already solves the auth this machine trips on.
+`scripts/run.sh` is the verbose step runner: source it and put every step through
+`run`, so a script that fails on its first line says so instead of reading as a
+success. `bash scripts/run.sh --self-check` proves its own checks can fail.
 
 Work is tracked in **colby-maestro** (`https://colby-maestro.hacolby.workers.dev/mcp`,
 bearer `$(tokens show WORKER_API_KEY --value-only)`) — never in this repo and never

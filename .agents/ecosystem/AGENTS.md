@@ -854,6 +854,22 @@ actually theirs to make. Even then, ask once, with everything else already done.
 
 # A background task that has produced nothing in 2 minutes has hung
 
+**This rule is now enforced, not advised.** The `colby-maestro` plugin tracks
+every backgrounded Bash command and, past the cutoff with no new output,
+reports it on your next Bash call and refuses to let the turn end. Each task
+blocks once; a task still producing output is never touched. The rest of this
+chapter is what to do when it fires. Details and the measured mechanism:
+`plugins/colby-maestro/README.md`.
+
+A second guard sits in front of the problem rather than behind it: a PreToolUse
+lint rejects the command shapes that make a first-run error invisible — a
+build piped into a filter whose status is then chained off, a credential
+captured with its error silenced, `curl -s` into a blind parser, `|| true` on a
+build, a backgrounded command piped into a buffering filter. It was calibrated
+against 91,009 real Bash calls from this machine and fires on 3.07% of them, so
+`2>/dev/null` on a probe is still fine. `ERRORS_EXPECTED` in a command stands
+it down; `COLBY_MAESTRO_SCRIPT_LINT=off` stands it down entirely.
+
 **Two minutes is the cutoff. Not three hours.** If a backgrounded command or a
 monitor has not finished and has produced **no output** in two minutes, treat it
 as hung: stop it, and find out why with a foreground run you can actually watch.
@@ -888,6 +904,12 @@ Two signals, and **either** is enough:
    `pg_stat_activity` answer this in one call each.
 
 ## Corollary: never pipe a long-running command through a filter
+
+`scripts/run.sh` (shipped into every repo by the briefing sync) does this
+correctly already: `run <cmd>` prints the step, the command and the exit status,
+and `bg <cmd>` sends the whole unfiltered stream to a file and prints its path.
+Source it rather than writing the logging again — and never pipe `bg`'s command
+into anything.
 
 `cmd | grep -E "..."` is how a 10-minute deploy produces an empty output file for
 its whole life. If you want a filtered view, write the full output to a file and
@@ -967,6 +989,116 @@ values (`4318`, `127.0.0.1`), and version numbers (`0.1.28`). Neither is anythin
 inside a code block, a path, or a literal a machine will parse — `maxTranscripts:
 100` stays exactly as the config spells it. When in doubt, ask whether a reader
 would ever say the number out loud as an amount. If yes, format it.
+
+## The sentence itself: tight, specific, unhedged
+
+The rules above are about what to tell him and in what order. These are about the
+sentence. Every one of them is checkable, which is the only reason it is here —
+"write more clearly" is not an instruction anybody can follow.
+
+### A sentence over 30 words is a defect, not a style choice
+
+**Target 25 words. Hard ceiling 30.** Past that the reader holds too many clauses
+at once, and he is reading between two other tasks. Break at the joint that is
+already in the sentence:
+
+- at **and** or **but** — usually a second thought wearing a conjunction
+- at **which** or **that** — a relative clause stands up on its own
+- at a **semicolon** — already a soft break
+- before an example — "For example" starts a sentence
+
+Three or more commas in one sentence is the same signal arriving a different way.
+One idea per sentence, and a 15–20 word average across a paragraph — varied, not
+uniform. Then read it aloud: if you run out of breath, it is too long. That check
+costs nothing and catches what counting does not.
+
+### A vague word standing where you have the number is a defect
+
+This is "never report a block you have not measured" at sentence level, and it is
+the one that actually reaches his screen. You ran the command. The number was in
+the output. The report said "significantly faster".
+
+| Never write | When you have |
+| --- | --- |
+| significantly / substantially / considerably faster | the figure: `3.2× faster` |
+| several files, many rows, a few tasks | the count: `7 files`, `958,379 rows` |
+| recently, soon, a bit | the date or duration: `on 2026-10-14`, `in 8 minutes` |
+| much larger, a lot smaller | both sides: `933 MB against 2.2 GB` |
+| most of them, nearly all | the fraction: `40 of 43` |
+
+**If you genuinely do not have the number, say so in the sentence and ask for it.**
+Write `[specify: how many?]` rather than reaching for "several" — an unanswered
+question is visible where a vague quantifier is not. Never invent a figure to
+satisfy this rule; that is the worse defect of the two, and it is unrecoverable
+because it reads as measured.
+
+The same holds for a claim's source. "Studies show", "it is believed", "best
+practice is" — name who, or drop the claim.
+
+### Hedge only where the uncertainty is real
+
+Hedge a prediction, a judgement call, or somebody else's view. Never hedge a thing
+you measured ten minutes ago. "It seems like the token may not have the scope" is
+a worse sentence than "I ran `gh auth status`; `workflow` is not in the scope
+list". It is worse in the way that costs him time: he now has to ask which of the
+two it was.
+
+Cut outright: *it could be argued that*, *to some extent*, *in a sense*,
+*arguably*, *it should be noted that*, *it is important to realise that*, *at this
+point in time*, *in terms of*, *for all intents and purposes*.
+
+### Short word over long, every time
+
+The ones that recur in agent prose:
+
+| Reach for | Not |
+| --- | --- |
+| use | utilise, leverage |
+| help, enable | facilitate |
+| start, introduce | implement, commence |
+| about | approximately, with regard to |
+| before / after | prior to / subsequent to |
+| to | in order to |
+| if | in the event that |
+| lessons | learnings |
+| from now on | going forward |
+
+And cut the doubled word: *end result* is a result, *past history* is history,
+*advance planning* is planning, *future plans* are plans, *general consensus* is
+consensus, *very unique* is unique.
+
+### Do not grade your own work inside the sentence
+
+"An impressive 10% improvement" is two claims and the second one is yours. Write
+`10% improvement` and let him decide whether it is impressive. Same for
+*disappointing*, *alarming*, *brilliant*, *surprisingly*, and for the intensifiers
+— *very*, *really*, *extremely*, *incredibly*. If a thing is crucial, "crucial"
+has already said so.
+
+This is the hardest of these rules to hold while reporting your own work, and it
+is the one he notices.
+
+### For a rewrite, the skill does more than this block
+
+These rules are for prose you are writing now: a reply, a worklog entry, a PR
+body, a decision record. When the job is to **edit** an existing document, load
+the **humanizer** skill. It carries the AI-writing tells this block deliberately
+does not repeat: em and en dashes, the rule of three, inflated symbolism,
+negative parallelisms. Its dash rule is a hard zero, stricter than any
+one-per-paragraph limit. It also runs a draft, audit and final pass.
+**better-writing** is a different job again: interface copy, labels, errors,
+empty states.
+
+Two things these files deliberately do **not** adopt, recorded so nobody
+"corrects" them later. The Economist's number style — one to ten spelled out,
+`$5m`, `April 5th` — loses to the rule above it in this chapter: thousands
+separators and two decimals, every time. And its advice to keep professional
+distance, avoid "you" and avoid the first person does not apply here; write to him
+directly.
+
+**These briefings are not the worked example.** They are reference text, they are
+full of em dashes and long sentences, and that is not a licence to write a reply
+that way. Do not rewrite them to match this block.
 
 ## Output style
 
@@ -1138,6 +1270,56 @@ Claude Code, cloud sessions, and Claude on iOS. The bearer token is the standard
 `WORKER_API_KEY` — the same credential every Worker in the ecosystem accepts (see
 "Secrets & credentials"); never mint a maestro-specific one.
 
+### Every door now reaches the Worker. Stop hunting for the "right" one.
+
+**Measured 2026-10-14, on this Mac.** All three of these write to the Worker, and
+there is no longer a local SQLite lane for an agent to fall into:
+
+| Door | Where it actually goes | Proof |
+|---|---|---|
+| `mcp__colby-maestro__*` (`search` / `execute`) | the Worker's `/mcp` | `~/.config/colby-mcp/servers.json` maps `colby-maestro` to `https://colby-maestro.hacolby.workers.dev/mcp` through `mcp-remote`; `codemode.spec().info.title` answers `Colby Maestro API` with **214 paths**, the same count as the Worker's own `/openapi.json` |
+| `colby-maestro` CLI (`~/.local/bin/colby-maestro`) | the Worker's REST API | `local_ai_orchestrator/shared/worker_api.py` sets `DEFAULT_WORKER_BASE_URL = https://colby-maestro.hacolby.workers.dev`; `colby-maestro tasks list --project-key colby-ecosystem --json` and `GET /api/tasks?project_key=colby-ecosystem` returned the same first task, field for field |
+| `maestro-task` (the plugin's CLI) | the Worker's REST API | `plugins/colby-maestro/lib/colby_maestro/http.py`, against `base_url()` |
+
+**This paragraph used to say the opposite, and that was the bug.** Until
+2026-10-14 this file told agents that `mcp__colby-maestro__*` and the
+`colby-maestro` CLI were "legacy" tools writing to a local SQLite mirror, and
+that the obvious-looking tool was "the wrong one". It had been true; Justin
+rewired both to the Worker and the warning stayed. The result was agents
+distrusting the correct tool, going looking for a client that was not installed,
+and reporting themselves blocked on a job the tool in their hand would have
+done. **A stale warning does more damage than no warning** — it does not merely
+fail to help, it actively sends work to the wrong place, or to nowhere.
+
+So: **measure against the machine, not against this file.** The probe is one
+call and it costs nothing:
+
+```js
+// as the `code` argument to any code-mode server's `search`
+async () => { const s = await codemode.spec(); return s.info.title; }
+```
+
+If what you measure disagrees with what you read here, the measurement wins —
+and fixing this file is part of the job (see "End of session").
+
+### `maestro-task` is the plugin's CLI, and it is not always there
+
+`maestro-task` is on PATH **only while the `colby-maestro` plugin is enabled in
+that session**. It is not installed in `~/bin`, so a session without the plugin
+genuinely has no `maestro-task`, and that is not a broken machine.
+
+What it does NOT mean is that the session cannot be linked to a task. `bind` is
+not a Worker route — there is no `/bind` among the 214 paths, because binding is
+per-session state the plugin keeps plus a heartbeat. Without the plugin:
+
+- **to link a session to a task:** `POST /api/agents/heartbeat` with
+  `session_key` and `task_id`;
+- **to move a status or add a worklog note:** the ordinary task routes, through
+  the MCP's `execute` or over HTTP.
+
+Neither needs `maestro-task`. "I could not find the client, so the work could
+not be recorded" is never the answer.
+
 ### Tracking work is colby-maestro's job, and only colby-maestro's
 
 The two systems share a prefix and get mistaken for each other constantly. They do
@@ -1152,30 +1334,19 @@ Filing a PROPOSAL (see "End of session") does not break that rule: it creates a
 **maestro task whose `project_key` happens to be `colby-ecosystem`**. The tracking
 lives in maestro; only the file the proposal wants changed lives in the repo.
 
-**Legacy — never write tracking state through these:**
-
-- **The local Python MCP** — `mcp__colby-maestro__*`, launched as
-  `colby-maestro mcp-serve`, FastMCP on `127.0.0.1:4318`. Its task tools write to
-  a local SQLite mirror, not to the Worker. That is how stale tasks piled up: 12
-  written on 2026-09-18 never reached the Worker, because the Worker now refuses
-  any new task without a plan heading and the local tools cannot send one.
-- **The `colby-maestro` CLI.** Same store, same problem.
-
-If your session has both, the `mcp__colby-maestro__*` name looks like the obvious
-one. It is the wrong one.
+**One thing is still genuinely local.** `colby-maestro mcp-serve` can still run a
+FastMCP server on `127.0.0.1:4318`, and it is wired into no client on this
+machine — nothing in `~/.config/colby-mcp/servers.json` points at it. Start it
+only for the host-local operations the Worker's catalog does not carry
+(`orchestrator_*`, `cfg_*`, local model inventory). Never for a task, a status, a
+claim or a worklog.
 
 **Finding the connector — its name does not say "maestro".** In the desktop app
 it arrives as `mcp__<uuid>__search` and `mcp__<uuid>__execute`, whose
 descriptions are a generic code-mode OpenAPI blurb. **A keyword search cannot find
 it** — measured 2026-09-19, `ToolSearch` for `maestro task worklog room briefing`
 returned eight tools and none of them was Maestro, with the connector live. Ask
-each code-mode server who it is:
-
-```js
-// as the `code` argument to mcp__<uuid>__search
-async () => { const s = await codemode.spec(); return s.info.title; }
-```
-
+each code-mode server who it is with the `codemode.spec()` probe above;
 `"Colby Maestro API"` is the hit. Then drive it with
 `codemode.request({ method, path, body })` through that server's `execute`.
 
@@ -1200,12 +1371,33 @@ against `https://colby-maestro.hacolby.workers.dev`.
 "No maestro MCP in this session" is never a reason to leave work unrecorded — and
 it is a claim you must measure with the `codemode.spec()` probe before you make it.
 
+### Token spend is reported by a hook, not by you
+
+Every coding session reports what it spent to
+`https://agents.hacolby.app/api/submit/token-usage`, and the `colby-maestro`
+plugin's `TokenUsage` hook does it on Stop and SessionEnd without being asked.
+You do not call it, and you do not need to total anything up yourself.
+
+Two things to know rather than rediscover:
+
+- **A transcript line is not an API request.** Claude Code writes one line per
+  content block and every line repeats the full `usage` of its request. Measured
+  2026-10-14: 47 lines carrying usage held **18** distinct `requestId` values.
+  Anything that sums lines over-reports by about 2.6x. The grain is the request.
+- **It is charged to whatever tasks are bound to the session**, several at once
+  if that is the truth. So binding a task is what makes its actual cost
+  knowable — an unbound session's spend is recorded, but attributed to nothing.
+
+The raw rows land in `agent_token_usage` on the maestro Postgres; the budget
+ledger (`token_spend_entries`) is a separate, later layer. Design:
+`docs/superpowers/specs/2026-10-14-agent-token-telemetry-design.md` in the
+colby-maestro repo.
+
 **Full rules: `~/AGENTS-maestro.md`.**
 
 ---
 
 ---
-
 # End of session — propose improvements upstream
 
 **Before you finish, ask whether the work you just did should change the shared

@@ -9,8 +9,11 @@
 
 # Where it lives now
 
-**Colby Maestro is a Cloudflare Worker.** The database (D1), the REST API, the
-MCP server, and the operator console are all hosted on it:
+**Colby Maestro is a Cloudflare Worker.** The REST API, the MCP server and the
+operator console are all hosted on it. **The database is Postgres, not D1** —
+`maestro` on LXC 109, reached through Hyperdrive; the D1 binding was removed on
+2026-09-26, and `drizzle/*.sql` at the top level are its retired migrations.
+Schema work therefore means `backend/db/schemas/**` (pgTable) and `drizzle/pg`:
 
 | | |
 |---|---|
@@ -19,6 +22,7 @@ MCP server, and the operator console are all hosted on it:
 | MCP endpoint | `https://colby-maestro.hacolby.workers.dev/mcp` |
 | API contract | `https://colby-maestro.hacolby.workers.dev/openapi.json` |
 | Liveness | `/api/ping` (**unauthenticated**), `/health` (dependency checks) |
+| Raw token telemetry | `https://agents.hacolby.app/api/submit/token-usage` — a FastAPI service on LXC 109, not the Worker. The plugin's `TokenUsage` hook posts to it; you do not call it by hand |
 | Source | `/Volumes/Projects/workers/colby-maestro` |
 
 **The local service is legacy, and is not how agents reach Maestro.** A
@@ -32,29 +36,40 @@ that has moved.
 
 # Which door, in order
 
-**1. The Worker's MCP — the claude.ai connector. This is the only normal path.**
-It is the same connector in local Claude Code, cloud sessions and Claude on iOS,
-and it is code mode: `search` the OpenAPI spec, then `execute` with
-`codemode.request({ method, path, body })`.
+**Every door reaches the Worker now. Pick the one in front of you and use it.**
+Measured 2026-10-14 on this Mac: the MCP tools, the `colby-maestro` CLI and
+`maestro-task` all write to `colby-maestro.hacolby.workers.dev`. There is no
+local SQLite lane left to fall into, and no "wrong" client to avoid.
 
-| Server | Status |
-|---|---|
-| Worker (`/mcp`, the claude.ai connector) | **Use this.** Every task, claim, worklog, plan, room, briefing and proposal |
-| Local (`mcp__colby-maestro__*`, `colby-maestro mcp-serve`, port 4318) | **Legacy. Never write tracking state through it** — see "Do not add to the drift" |
+| Door | Goes to | Use it when |
+|---|---|---|
+| **The Worker's MCP** — `mcp__colby-maestro__search` / `execute`, the claude.ai connector | the Worker's `/mcp`. `codemode.spec().info.title` answers `Colby Maestro API`, 214 paths | **the normal path.** Code mode: `search` the spec, then `execute` with `codemode.request({ method, path, body })` |
+| **`maestro-task`** — the plugin's CLI | the Worker's REST API | binding, status and worklog from a Bash tool, when the plugin is enabled |
+| **`colby-maestro`** — `~/.local/bin/colby-maestro` | the Worker's REST API (`DEFAULT_WORKER_BASE_URL` in `shared/worker_api.py`) | the richer operator surface: briefings, assignees, model inventory |
+| **Plain HTTP** — `/openapi.json` + `Authorization: Bearer $(tokens show WORKER_API_KEY --value-only)` | the Worker | no MCP in this session, or the connector is failing |
+| `colby-maestro mcp-serve` — FastMCP on `127.0.0.1:4318` | a local store, and **no client on this machine points at it** | host-local operations only (`orchestrator_*`, `cfg_*`, local models). **Never** a task, status, claim or worklog |
+
+**This table was wrong until 2026-10-14**, and it is worth knowing why. It
+listed `mcp__colby-maestro__*` as "Legacy. Never write tracking state through
+it", which had been true before Justin pointed it at the Worker. Agents read the
+warning, distrusted the correct tool, went looking for a client that was not
+installed, and reported themselves blocked. Whenever this file and the machine
+disagree, **re-measure and then fix this file** — a stale warning routes work to
+nowhere, which is worse than no warning at all.
 
 **The connector's name does not say "maestro"** — in the desktop app it is
 `mcp__<uuid>__search` / `__execute`. Identify it before concluding it is absent;
 the probe is in "The Worker connector is invisible to a keyword search" below.
 
-**What the connector does not cover yet.** The Worker holds a VPC path to this
-Mac (core-bridge → `127.0.0.1:4318`, measured end to end in Phase 8 of the
-*GitHub Star Agent* plan), but as of 2026-09-21 its MCP catalog exposes none of
-the local-only tools — no `orchestrator_*`, `cfg_*`, `jules_*` or sync route among
-its 69 paths. Phase 8's backlog is exactly that missing surface. Until it lands,
-those host-local operations are the only legitimate use of the local server.
+**`maestro-task` is not always installed.** It is on PATH only while the
+`colby-maestro` plugin is enabled, and there is no copy in `~/bin`. Its absence
+does not strand the session: `bind` is not a Worker route at all (there is no
+`/bind` among the 214 paths — binding is per-session plugin state plus a
+heartbeat), so without the plugin, link the session with
+`POST /api/agents/heartbeat` carrying `session_key` and `task_id`, and move
+status or add worklog notes through the ordinary task routes.
 
 **Discover, do not guess a path** — `search` first, then `execute`.
-
 ## The Worker connector is invisible to a keyword search. Probe for it.
 
 **This is the single most common Maestro failure, and it looks like the opposite
@@ -157,10 +172,9 @@ hardcode it, never read it from a `.env`.
   returned 112. Slice client-side, and never assume a list you asked to cap is capped.
 - **`POST /api/tasks` requires `task_type` *and* `priority` explicitly.** Omitting
   them is a 400 (`priority: Invalid input: expected string, received undefined;
-  task_type: …`), while `task_upsert_tool` over MCP defaults both. The same
-  logical write has two different required-field sets, so a body that works over
-  MCP 400s over REST. Send `"task_type": "task"` and a `priority` unless you mean
-  something else.
+  task_type: …`). The legacy local `task_upsert_tool` used to default both, but
+  the Worker connector REST API does not. Send `"task_type": "task"` and a
+  `priority` unless you mean something else.
 - *(Fixed 2026-09-13: the unscoped `GET /api/tasks` used to 500 and now returns
   200. Scoping with `project_key` is still cheaper, and `GET /api/briefing` is
   still the better call for "what am I supposed to be doing".)*
@@ -185,6 +199,14 @@ locally is refused on every pass, forever. Before the reconciler existed, nothin
 synced until someone ran `worker_sync_tool` by hand. On 2026-09-13
 the two stores were 223 local / 187 remote, 96 tasks unpushed and 54 unpulled,
 and they had grown worse, not better, over a day.
+
+**As of 2026-10-14 the drift can no longer grow, because nothing an agent uses
+writes to the mirror.** `~/.config/colby-mcp/servers.json` points
+`colby-maestro` at the Worker's `/mcp`, the `colby-maestro` CLI's task commands
+go through `shared/worker_api.py` to the Worker, and `maestro-task` posts to the
+Worker. The numbers below are history, kept because they say what the failure
+cost. Read this section as "the Worker is the source of truth", not as a reason
+to distrust the tool in your hand.
 
 So the default is: **write tracking state through the Worker.**
 
