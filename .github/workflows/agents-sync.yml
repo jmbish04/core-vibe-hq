@@ -20,18 +20,26 @@
 
 name: agents-sync
 
+# WHEN IT RUNS — on a pull request, never on a push to the default branch and never on a
+# schedule (Justin, 2026-10-21; decisions/2026-10-21-agents-sync-fanout.md).
+# The old push + weekly cron triggers committed straight to main in every repo, so ONE
+# change in colby-ecosystem became an Actions run AND a Workers Build in every repo, and
+# every merge anywhere cost an extra run. Now the refreshed briefings are committed to the
+# PR's own branch, so they reach main inside a merge that was going to build anyway.
+#
+# The commit uses GITHUB_TOKEN, and GitHub does not start workflows from a GITHUB_TOKEN
+# push, so this cannot loop. A Workers Builds preview build may still run for that push if
+# the Worker builds non-production branches.
 on:
-  push:
-    branches: [main, master]
-  schedule:
-    - cron: "17 9 * * 1" # the briefings change without this repo changing
+  pull_request:
+    types: [opened, reopened, synchronize]
   workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: agents-sync-${{ github.ref }}
+  group: agents-sync-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -69,16 +77,20 @@ jobs:
     #
     # DO NOT replace this with the fork guard from test.yml:
     #   ${{ github.event.pull_request.head.repo.full_name && … || fromJSON('[…]') }}
-    # That is meaningful in test.yml, which runs on pull_request. This workflow subscribes
-    # to push, schedule and workflow_dispatch only, so github.event.pull_request is ALWAYS
-    # null, the guard is always falsy, and it is unconditional self-hosted in disguise —
-    # which is exactly what sits queued in a repo with no runner.
+    # On workflow_dispatch github.event.pull_request is null, so that guard is falsy and it
+    # becomes unconditional self-hosted in disguise — which is exactly what sits queued in
+    # a repo with no runner. Forks are handled by the `if:` below instead.
+    #
+    # A PR from a fork gets no secrets and a read-only token: it can neither pull the
+    # briefings nor push to the fork's branch. Skip it rather than fail it red.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ${{ vars.AGENTS_SYNC_RUNNER && fromJSON(vars.AGENTS_SYNC_RUNNER) || 'ubuntu-latest' }}
     steps:
-      # ref_name, not the bare SHA: a detached HEAD cannot push.
+      # A branch name, not the bare SHA: a detached HEAD cannot push. On a pull request
+      # that is head_ref (the PR branch); ref_name there is "<n>/merge", which cannot push.
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref_name }}
+          ref: ${{ github.head_ref || github.ref_name }}
 
       - name: Pull the right-sized briefings
         env:
