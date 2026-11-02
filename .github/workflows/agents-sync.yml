@@ -102,8 +102,35 @@ jobs:
             echo "  gh secret set COLBY_ECOSYSTEM_TOKEN --repo ${{ github.repository }}" >&2
             exit 1
           fi
-          gh api repos/jmbish04/colby-ecosystem/contents/scripts/pull-agents \
-            --jq .content | base64 -d > /tmp/pull-agents
+          # The GitHub CLI is NOT on every runner, and this step used `gh api`. The pve-135
+          # box registers a fresh `pve-135-job-<id>` runner per job and those images ship no
+          # `gh`, while the persistent `pve-135-colby-orchestrator` on the same box does and
+          # answers the same labels — so the failure landed on whichever runner picked the
+          # job, which is why it read as intermittent. pull-agents itself was taught to fall
+          # back to curl for exactly this reason, but THIS step is what fetches pull-agents,
+          # so it died at line 7 before any fallback could help:
+          #   /home/runner/_work/_temp/....sh: line 7: gh: command not found
+          #   ##[error]Process completed with exit code 127
+          # Measured on jmbish04/core-template-cf-reui run 41379248409 (job 125066209203),
+          # 2026-11-02: every pull_request run there had failed that way since 2026-10-21,
+          # when the repo's AGENTS_SYNC_RUNNER variable was set.
+          #
+          # curl is on both runner images and on ubuntu-latest. `Accept: ...raw` returns the
+          # file's bytes, so there is no base64 hop to get wrong, and --fail-with-body turns
+          # an HTTP error into a non-zero exit instead of a file full of JSON.
+          curl -sSL --fail-with-body \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github.raw" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/jmbish04/colby-ecosystem/contents/scripts/pull-agents \
+            > /tmp/pull-agents
+          # A 200 that is not the script would otherwise be run by bash and could exit 0,
+          # which is a sync that reports success and changes nothing.
+          head -1 /tmp/pull-agents | grep -q '^#!/usr/bin/env bash' || {
+            echo "fetched pull-agents is not a bash script:" >&2
+            head -5 /tmp/pull-agents >&2
+            exit 1
+          }
           bash /tmp/pull-agents --list
           bash /tmp/pull-agents
 
