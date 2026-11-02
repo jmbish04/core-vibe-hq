@@ -20,7 +20,7 @@ jobs:
     if: >
       github.event.comment.user.login != 'jmbish04' &&
       github.event.issue.pull_request != null
-    runs-on: ${{ vars.CI_RUNNER && fromJSON(vars.CI_RUNNER) || 'ubuntu-latest' }}
+    runs-on: ${{ startsWith(vars.CI_RUNNER, '[') && endsWith(vars.CI_RUNNER, ']') && fromJSON(vars.CI_RUNNER) || 'ubuntu-latest' }}
 
     steps:
       - name: Wait 30 seconds to batch comments
