@@ -9,7 +9,9 @@
   "compatibility_flags": ["nodejs_compat"],
   "compatibility_date": "2025-03-19",
   "observability": {
-    "enabled": true
+    "enabled": true,
+    "traces": { "enabled": false },
+    "logs": { "enabled": true, "invocation_logs": false }
   },
   "dev": {
     "port": 3000

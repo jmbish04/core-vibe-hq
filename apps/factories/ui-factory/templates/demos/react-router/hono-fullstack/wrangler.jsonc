@@ -10,7 +10,9 @@
 		"VALUE_FROM_CLOUDFLARE": "Hello from Hono/CF"
 	},
 	"observability": {
-		"enabled": true
+		"enabled": true,
+		"traces": { "enabled": false },
+		"logs": { "enabled": true, "invocation_logs": false }
 	},
 	/**
 	 * Smart Placement

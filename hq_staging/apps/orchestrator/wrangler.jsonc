@@ -21,7 +21,9 @@
 	// Observability settings
 	"observability": {
 		"enabled": true,
-		"head_sampling_rate": 1.0
+		"head_sampling_rate": 1.0,
+		"traces": { "enabled": false },
+		"logs": { "enabled": true, "invocation_logs": false }
 	},
 	// Source maps for better debugging
 	"upload_source_maps": true,

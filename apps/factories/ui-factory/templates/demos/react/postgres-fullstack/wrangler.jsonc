@@ -8,7 +8,9 @@
 	"compatibility_flags": ["nodejs_compat"],
 	"compatibility_date": "2025-10-08",
 	"observability": {
-		"enabled": true
+		"enabled": true,
+		"traces": { "enabled": false },
+		"logs": { "enabled": true, "invocation_logs": false }
 	},
 	"assets": {
 		"binding": "ASSETS",

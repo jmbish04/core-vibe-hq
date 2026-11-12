@@ -26,8 +26,10 @@
   "name": "mcp-elicitation-demo",
   "observability": {
     "logs": {
-      "enabled": true
-    }
+      "enabled": true,
+      "invocation_logs": false
+    },
+    "traces": { "enabled": false }
   },
   "vars": {
     "HOST": "<DEPLOYED_HOSTNAME>"

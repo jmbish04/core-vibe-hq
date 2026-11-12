@@ -8,7 +8,9 @@
 	"main": "src/index.ts",
 	"compatibility_date": "2025-04-01",
 	"observability": {
-		"enabled": true
+		"enabled": true,
+		"traces": { "enabled": false },
+		"logs": { "enabled": true, "invocation_logs": false }
 	},
 	"dev": {
 		"port": 8789

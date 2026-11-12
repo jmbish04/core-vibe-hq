@@ -5,7 +5,9 @@
   "compatibility_flags": ["nodejs_compat_v2"],
   "observability": {
     "enabled": true,
-    "head_sampling_rate": 1.0
+    "head_sampling_rate": 1.0,
+    "traces": { "enabled": false },
+    "logs": { "enabled": true, "invocation_logs": false }
   },
   "ai": {
     "binding": "AI"

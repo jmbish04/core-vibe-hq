@@ -31,7 +31,9 @@
 		"run_worker_first": ["/api/*", "!/api/docs/*"]
 	},
 	"observability": {
-		"enabled": true
+		"enabled": true,
+		"traces": { "enabled": false },
+		"logs": { "enabled": true, "invocation_logs": false }
 	},
 	"vars": {
 		"CF_AI_BASE_URL": "https://gateway.ai.cloudflare.com/v1/YOUR_ACCOUNT_ID/YOUR_GATEWAY_ID/openai",

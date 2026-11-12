@@ -4,7 +4,9 @@
 	"main": "src/index.ts",
 	"compatibility_date": "2025-02-24",
 	"observability": {
-		"enabled": true
+		"enabled": true,
+		"traces": { "enabled": false },
+		"logs": { "enabled": true, "invocation_logs": false }
 	},
 	"ai": {
 		"binding": "AI"

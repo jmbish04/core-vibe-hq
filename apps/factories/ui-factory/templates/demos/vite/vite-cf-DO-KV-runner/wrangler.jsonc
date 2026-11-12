@@ -12,7 +12,9 @@
 		"run_worker_first": ["/api/*", "!/api/docs/*"]
 	},
 	"observability": {
-		"enabled": true
+		"enabled": true,
+		"traces": { "enabled": false },
+		"logs": { "enabled": true, "invocation_logs": false }
 	},
     "durable_objects": {
       "bindings": [
